@@ -1,0 +1,7 @@
+name: minigames
+version: '1.0'
+main: bnjmn21.minigames.Minigames
+api-version: '1.21'
+authors: [ bnjmn21 ]
+description: Minigames for my server
+loader: bnjmn21.minigames.MinigamesLoader

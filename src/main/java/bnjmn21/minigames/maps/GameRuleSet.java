@@ -25,10 +25,18 @@ public class GameRuleSet {
         HashMap<GameRule<Integer>, Integer> allIntGameRules = new HashMap<>();
         for (GameRule<?> gameRule : GameRule.values()) {
             if (gameRule.getType() == Boolean.class) {
-                allBoolGameRules.put((GameRule<Boolean>) gameRule, boolGameRules.computeIfAbsent((GameRule<Boolean>) gameRule, world::getGameRuleDefault));
+                try {
+                    allBoolGameRules.put((GameRule<Boolean>) gameRule, boolGameRules.computeIfAbsent((GameRule<Boolean>) gameRule, world::getGameRuleDefault));
+                } catch (IllegalArgumentException ignored) {
+                    // gamerules may be behind disabled experiments, in which case we ignore it
+                }
             }
             if (gameRule.getType() == Integer.class) {
-                allIntGameRules.put((GameRule<Integer>) gameRule, intGameRules.computeIfAbsent((GameRule<Integer>) gameRule, world::getGameRuleDefault));
+                try {
+                    allIntGameRules.put((GameRule<Integer>) gameRule, intGameRules.computeIfAbsent((GameRule<Integer>) gameRule, world::getGameRuleDefault));
+                } catch (IllegalArgumentException ignored) {
+                    // gamerules may be behind disabled experiments, in which case we ignore it
+                }
             }
         }
         allBoolGameRules.forEach((gameRule, value) -> {
@@ -51,10 +59,18 @@ public class GameRuleSet {
         HashMap<GameRule<Integer>, Integer> allIntGameRules = new HashMap<>();
         for (GameRule<?> gameRule : GameRule.values()) {
             if (gameRule.getType() == Boolean.class) {
-                allBoolGameRules.put((GameRule<Boolean>) gameRule, boolGameRules.computeIfAbsent((GameRule<Boolean>) gameRule, world::getGameRuleDefault));
+                try {
+                    allBoolGameRules.put((GameRule<Boolean>) gameRule, boolGameRules.computeIfAbsent((GameRule<Boolean>) gameRule, world::getGameRuleDefault));
+                } catch (IllegalArgumentException ignored) {
+                    // gamerules may be behind disabled experiments, in which case we ignore it
+                }
             }
             if (gameRule.getType() == Integer.class) {
-                allIntGameRules.put((GameRule<Integer>) gameRule, intGameRules.computeIfAbsent((GameRule<Integer>) gameRule, world::getGameRuleDefault));
+                try {
+                    allIntGameRules.put((GameRule<Integer>) gameRule, intGameRules.computeIfAbsent((GameRule<Integer>) gameRule, world::getGameRuleDefault));
+                } catch (IllegalArgumentException ignored) {
+                    // gamerules may be behind disabled experiments, in which case we ignore it
+                }
             }
         }
         allBoolGameRules.forEach(world::setGameRule);

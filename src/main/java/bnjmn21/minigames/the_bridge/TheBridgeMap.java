@@ -10,6 +10,7 @@ import bnjmn21.minigames.data.data_types.IntegerPdt;
 import com.mojang.brigadier.tree.LiteralCommandNode;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
 import net.kyori.adventure.text.Component;
+import org.bukkit.GameRule;
 
 public class TheBridgeMap {
     public final MapDataField<IVec3> center;
@@ -29,6 +30,37 @@ public class TheBridgeMap {
         redGoal = builder.add("redGoal", IVec3Pdt.INSTANCE);
         blueSpawn = builder.add("blueSpawn", IVec3Pdt.INSTANCE);
         blueGoal = builder.add("blueGoal", IVec3Pdt.INSTANCE);
+
+        builder.addGameRule(GameRule.ANNOUNCE_ADVANCEMENTS, false);
+        builder.addGameRule(GameRule.COMMAND_BLOCK_OUTPUT, false);
+        builder.addGameRule(GameRule.DISABLE_RAIDS, true);
+        builder.addGameRule(GameRule.DO_DAYLIGHT_CYCLE, false);
+        builder.addGameRule(GameRule.DO_ENTITY_DROPS, false);
+        builder.addGameRule(GameRule.DO_FIRE_TICK, false);
+        builder.addGameRule(GameRule.DO_IMMEDIATE_RESPAWN, true);
+        builder.addGameRule(GameRule.DO_INSOMNIA, false);
+        builder.addGameRule(GameRule.DO_MOB_LOOT, false);
+        builder.addGameRule(GameRule.DO_MOB_SPAWNING, false);
+        builder.addGameRule(GameRule.DO_PATROL_SPAWNING, false);
+        builder.addGameRule(GameRule.DO_TILE_DROPS, false);
+        builder.addGameRule(GameRule.DO_TRADER_SPAWNING, false);
+        builder.addGameRule(GameRule.DO_VINES_SPREAD, false);
+        builder.addGameRule(GameRule.DO_WARDEN_SPAWNING, false);
+        builder.addGameRule(GameRule.DO_WEATHER_CYCLE, false);
+        builder.addGameRule(GameRule.DROWNING_DAMAGE, false);
+        builder.addGameRule(GameRule.FIRE_DAMAGE, false);
+        builder.addGameRule(GameRule.FREEZE_DAMAGE, false);
+        builder.addGameRule(GameRule.FALL_DAMAGE, false);
+        builder.addGameRule(GameRule.KEEP_INVENTORY, false);
+        builder.addGameRule(GameRule.LOCATOR_BAR, false);
+        builder.addGameRule(GameRule.NATURAL_REGENERATION, false);
+        builder.addGameRule(GameRule.ALLOW_ENTERING_NETHER_USING_PORTALS, false);
+        builder.addGameRule(GameRule.RANDOM_TICK_SPEED, 0);
+        builder.addGameRule(GameRule.SPAWN_MONSTERS, false);
+        builder.addGameRule(GameRule.SPECTATORS_GENERATE_CHUNKS, false);
+        builder.addGameRule(GameRule.WATER_SOURCE_CONVERSION, false);
+        builder.addGameRule(GameRule.TNT_EXPLODES, false);
+
         command = builder.buildCommand("the_bridge_edit", Component.text(
         """
                 

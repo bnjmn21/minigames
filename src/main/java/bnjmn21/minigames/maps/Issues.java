@@ -2,6 +2,7 @@ package bnjmn21.minigames.maps;
 
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.TextDecoration;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -40,6 +41,7 @@ public class Issues {
             if (items.size() == 1) {
                 lines.add(Component.text(collection.singular(items.getFirst())).color(NamedTextColor.RED));
             } else if (items.size() <= 3) {
+                lines.add(Component.text(collection.plural()).color(NamedTextColor.RED));
                 lines.add(Component.text(String.join(", ", items)).color(NamedTextColor.RED));
             } else {
                 lines.add(Component.text(collection.plural()).color(NamedTextColor.RED));
@@ -61,6 +63,7 @@ public class Issues {
             if (items.size() == 1) {
                 lines.add(Component.text(collection.singular(items.getFirst())).color(NamedTextColor.YELLOW));
             } else if (items.size() <= 3) {
+                lines.add(Component.text(collection.plural()).color(NamedTextColor.YELLOW));
                 lines.add(Component.text(String.join(", ", items)).color(NamedTextColor.YELLOW));
             } else {
                 lines.add(Component.text(collection.plural()).color(NamedTextColor.YELLOW));
@@ -76,7 +79,7 @@ public class Issues {
 
         if (lines.size() > 10) {
             lines.subList(10, lines.size() - 10).clear();
-            lines.add(Component.text("... and more"));
+            lines.add(Component.text("... and more").decorate(TextDecoration.ITALIC));
         }
 
         if (lines.isEmpty()) {

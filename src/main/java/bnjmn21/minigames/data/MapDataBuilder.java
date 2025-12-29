@@ -21,6 +21,8 @@ public class MapDataBuilder {
     public final GameRuleSet gameRules = new GameRuleSet();
     private final Game game;
     private final Minigames plugin;
+    @Nullable
+    public String commandName;
 
     public MapDataBuilder(Game game, Minigames plugin) {
         this.game = game;
@@ -44,6 +46,8 @@ public class MapDataBuilder {
     }
 
     public LiteralCommandNode<CommandSourceStack> buildCommand(String commandName, Component help) {
+        this.commandName = commandName;
+
         var command = Commands
             .literal(commandName)
             .requires(ctx -> ctx.getSender().hasPermission("minigames.edit"))
@@ -89,14 +93,20 @@ public class MapDataBuilder {
                     return 1;
                 }))
                 .then(Commands.literal("set_default_game_rules").executes(ctx -> {
-                    gameRules.applyAndResetOthers(ctx.getSource().getLocation().getWorld());
-                    ctx.getSource().getSender().sendMessage(Component.text("All gamerules set."));
+                    @Nullable Editor editor = plugin.mapManager.getEditor(ctx.getSource().getLocation().getWorld());
+                    if (editor != null) {
+                        editor.disableUpdates = true; // prevent update spam due to mass-setting gamerules
+                        gameRules.applyAndResetOthers(ctx.getSource().getLocation().getWorld());
+                        ctx.getSource().getSender().sendMessage(Component.text("All gamerules set."));
+                        editor.disableUpdates = false;
+                        editor.onMapChange();
+                    }
                     return 1;
                 }))
                 .build();
     }
 
-    public <T> LiteralArgumentBuilder<CommandSourceStack> addFieldToSetter(LiteralArgumentBuilder<CommandSourceStack> setter, MapDataField<T> field) {
+    private <T> LiteralArgumentBuilder<CommandSourceStack> addFieldToSetter(LiteralArgumentBuilder<CommandSourceStack> setter, MapDataField<T> field) {
         return setter.then(field.dataType.setterSubcommand(
                 Commands.literal(field.key.getKey()),
                 field,
@@ -111,7 +121,7 @@ public class MapDataBuilder {
         ));
     }
 
-    public static <T> Component getAndView(PersistentDataContainer pdc, MapDataField<T> field) {
+    private static <T> Component getAndView(PersistentDataContainer pdc, MapDataField<T> field) {
         return field.dataType.view(field.get(pdc));
     }
 }

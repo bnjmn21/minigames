@@ -32,7 +32,7 @@ public interface IssueCollection {
 
         @Override
         public String plural() {
-            return "Multiple Gamerules wrong:";
+            return "Multiple gamerules wrong:";
         }
     }
 }

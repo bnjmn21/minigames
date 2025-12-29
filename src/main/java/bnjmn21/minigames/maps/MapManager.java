@@ -18,7 +18,6 @@ import org.bukkit.World;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
-import org.bukkit.event.player.PlayerCommandPreprocessEvent;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -30,7 +29,8 @@ import java.util.stream.Collectors;
 import static bnjmn21.minigames.util.Paths.path;
 
 public class MapManager implements LeaveWorldListener {
-    private final Map<String, GameMap> allMaps;
+    public final HashMap<String, GameMap> allMaps = new HashMap<>();
+    public final HashMap<Game, HashMap<String, GameMap>> mapByGame = new HashMap<>();
     private final HashMap<String, Optional<Editor>> editorMaps = new HashMap<>();
     private final Minigames plugin;
     private static final String editorMapPath = "map_editor";
@@ -38,7 +38,6 @@ public class MapManager implements LeaveWorldListener {
 
     public MapManager(Minigames plugin) {
         this.plugin = plugin;
-        this.allMaps = new HashMap<>();
         for (String map : discoverMaps(path(editorMapPath))) {
             plugin.getLogger().warning("The editor for `" + map + "` wasn't closed correctly. Saving...");
             String originalMap = Paths.toString(path(GameMap.path).resolve(path(editorMapPath).relativize(path(map))));
@@ -68,13 +67,14 @@ public class MapManager implements LeaveWorldListener {
         if (maybeEditor == null) {
             return null;
         }
-        return editorMaps.get(world.getName()).orElse(null);
+        return maybeEditor.orElse(null);
     }
 
     public void loadGameMaps(Game game, String mapDirectory) {
         var gameMaps = MapManager.discoverMaps(path(GameMap.path).resolve(mapDirectory)).stream()
                 .collect(Collectors.toMap(k -> k, name -> new GameMap(name, game, plugin)));
         this.allMaps.putAll(gameMaps);
+        this.mapByGame.computeIfAbsent(game, ignored -> new HashMap<>()).putAll(gameMaps);
 
         plugin.getLogger().info("Found the following " + game.friendlyName + " maps:");
         for (String map : this.allMaps.keySet()) {

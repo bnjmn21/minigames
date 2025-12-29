@@ -9,6 +9,7 @@ import net.kyori.adventure.text.format.TextDecoration;
 import net.megavex.scoreboardlibrary.api.sidebar.Sidebar;
 import net.megavex.scoreboardlibrary.api.sidebar.component.ComponentSidebarLayout;
 import net.megavex.scoreboardlibrary.api.sidebar.component.SidebarComponent;
+import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 
 public class Editor {
@@ -17,12 +18,21 @@ public class Editor {
     public final SidebarComponent sidebarComponent;
     public final ComponentSidebarLayout sidebarLayout;
     public final MapDataBuilder mapData;
+    public boolean disableUpdates = false;
+    private final Minigames plugin;
 
     public Editor(GameMap.Writeable map, Minigames plugin) {
         this.map = map;
         this.mapData = plugin.getGameMapData(map.original.game);
-        this.sidebar = plugin.scoreboardLibrary.createSidebar();
-        this.sidebarComponent = SidebarComponent.builder()
+        this.sidebar = plugin.scoreboardLibrary.createSidebar(15);
+        SidebarComponent.Builder sidebarComponent = SidebarComponent.builder();
+        if (this.mapData.commandName != null) {
+            sidebarComponent = sidebarComponent.addStaticLine(
+                    Component.text("Editor command: ").color(NamedTextColor.GRAY)
+                            .append(Component.text("/" + this.mapData.commandName).color(NamedTextColor.WHITE))
+            ).addBlankLine();
+        }
+        this.sidebarComponent = sidebarComponent
                 .addComponent(new IssuesSidebarComponent(this))
                 .build();
         this.sidebarLayout = new ComponentSidebarLayout(
@@ -33,6 +43,7 @@ public class Editor {
                 this.sidebarComponent
         );
         sidebarLayout.apply(sidebar);
+        this.plugin = plugin;
     }
 
     public Issues validate() {
@@ -43,11 +54,16 @@ public class Editor {
                 issues.addError(IssueCollection.UnsetField.INSTANCE, field.key.getKey());
             }
         }
+        mapData.gameRules.validate(map.world, issues);
         return issues;
     }
 
     public void onMapChange() {
-        sidebarLayout.apply(sidebar);
+        if (!disableUpdates) {
+            Bukkit.getScheduler().runTask(plugin, () -> {
+                sidebarLayout.apply(sidebar);
+            });
+        }
     }
 
     public void onJoin(Player player) {

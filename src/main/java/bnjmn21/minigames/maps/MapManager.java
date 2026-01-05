@@ -2,6 +2,7 @@ package bnjmn21.minigames.maps;
 
 import bnjmn21.minigames.Game;
 import bnjmn21.minigames.Minigames;
+import bnjmn21.minigames.framework.GameCommand;
 import bnjmn21.minigames.util.LeaveWorldListener;
 import bnjmn21.minigames.util.Paths;
 import com.mojang.brigadier.arguments.StringArgumentType;
@@ -29,37 +30,32 @@ import java.util.stream.Collectors;
 import static bnjmn21.minigames.util.Paths.path;
 
 public class MapManager implements LeaveWorldListener {
-    public final HashMap<String, GameMap> allMaps = new HashMap<>();
-    public final HashMap<Game, HashMap<String, GameMap>> mapByGame = new HashMap<>();
+    public HashMap<String, GameMap> maps = new HashMap<>();
+    public final Game game;
+    public final Path path;
+    public final Path editorPath;
     private final HashMap<String, Optional<Editor>> editorMaps = new HashMap<>();
     private final Minigames plugin;
-    private static final String editorMapPath = "map_editor";
     private final HashMap<String, ArrayList<Player>> teleportOnceLoaded = new HashMap<>();
 
-    public MapManager(Minigames plugin) {
+    public MapManager(Game game, String mapsPath, String editorPath, Minigames plugin) {
         this.plugin = plugin;
-        for (String map : discoverMaps(path(editorMapPath))) {
+        this.game = game;
+        this.path = path(mapsPath);
+        this.editorPath = path(editorPath);
+
+        for (String map : discoverMaps(path(editorPath))) {
             plugin.getLogger().warning("The editor for `" + map + "` wasn't closed correctly. Saving...");
-            String originalMap = Paths.toString(path(GameMap.path).resolve(path(editorMapPath).relativize(path(map))));
+            String originalMap = Paths.toString(this.path.resolve(this.editorPath.relativize(path(map))));
             GameMap.Writeable.recover(map, originalMap);
             plugin.getLogger().info("Saved " + map);
         }
-
+        loadGameMaps();
         plugin.getServer().getPluginManager().registerEvents(this, plugin);
     }
 
     public boolean isEditor(World world) {
         return editorMaps.containsKey(world.getName());
-    }
-
-    public boolean isEditorOfGame(World world, Game game) {
-        if (isEditor(world)) {
-            var maybeEditorMap = editorMaps.get(world.getName());
-            if (maybeEditorMap.isPresent()) {
-                return maybeEditorMap.get().map.original.game == game;
-            }
-        }
-        return false;
     }
 
     public @Nullable Editor getEditor(World world) {
@@ -70,28 +66,38 @@ public class MapManager implements LeaveWorldListener {
         return maybeEditor.orElse(null);
     }
 
-    public void loadGameMaps(Game game, String mapDirectory) {
-        var gameMaps = MapManager.discoverMaps(path(GameMap.path).resolve(mapDirectory)).stream()
-                .collect(Collectors.toMap(k -> k, name -> new GameMap(name, game, plugin)));
-        this.allMaps.putAll(gameMaps);
-        this.mapByGame.computeIfAbsent(game, ignored -> new HashMap<>()).putAll(gameMaps);
+    private void loadGameMaps() {
+        var gameMaps = MapManager.discoverMaps(path).stream()
+                .collect(Collectors.toMap(k -> k, name -> {
+                    Component displayName = Component.text(shortName(name));
+                    return new GameMap(name, game, displayName, plugin);
+                }));
+        this.maps.putAll(gameMaps);
 
         plugin.getLogger().info("Found the following " + game.friendlyName + " maps:");
-        for (String map : this.allMaps.keySet()) {
+        for (String map : this.maps.keySet()) {
             plugin.getLogger().info("- " + map);
         }
     }
 
-    private static String editorMapNameOf(String map) {
-        return Paths.toString(path(editorMapPath).resolve(path(GameMap.path).relativize(path(map))));
+    private String shortName(String fullName) {
+        return fullName.substring(Paths.toString(path).length() + 1);
+    }
+
+    private String fullName(String shortName) {
+        return Paths.toString(this.path.resolve(shortName));
+    }
+
+    private String editorName(String shortName) {
+        return Paths.toString(this.editorPath.resolve(shortName));
     }
 
     /**
      * Teleports the player to a temporary editor for the given map.
      * The editor is closed and saved when all players leave the editor.
      */
-    public void editMap(String map, Player player) {
-        String editorMapName = editorMapNameOf(map);
+    public void editMap(String shortName, Player player) {
+        String editorMapName = editorName(shortName);
         if (editorMaps.containsKey(editorMapName) && editorMaps.get(editorMapName).isPresent()) {
             tpToEditor(editorMaps.get(editorMapName).get(), player);
             return;
@@ -102,7 +108,7 @@ public class MapManager implements LeaveWorldListener {
 
         if (!editorMaps.containsKey(editorMapName)) {
             editorMaps.put(editorMapName, Optional.empty());
-            allMaps.get(map).createWritableCopy(editorMapName, world -> {
+            maps.get(fullName(shortName)).createWritableCopy(editorMapName, world -> {
                 Editor editor = new Editor(world, plugin);
                 editorMaps.put(editorMapName, Optional.of(editor));
                 for (Player p : getPlayersToTeleport(editorMapName)) {
@@ -130,36 +136,29 @@ public class MapManager implements LeaveWorldListener {
 
     private void tpToEditor(Editor editor, Player player) {
         editor.onJoin(player);
-        player.teleport(editor.map.world.getSpawnLocation());
+        player.teleport(editor.map.world().getSpawnLocation());
         Minigames.resetPlayer(player, GameMode.CREATIVE);
         player.sendMessage(Component.text("You are now in the map editor. Use /l to return to the lobby."));
     }
 
-    public LiteralCommandNode<CommandSourceStack> editCommand() {
-        return Commands.literal("edit")
-            .requires(ctx -> ctx.getSender().hasPermission("minigames.edit"))
+    public LiteralCommandNode<CommandSourceStack> openEditorCommand() {
+        return Commands.literal("open").requires(GameCommand::hasEditorPerm)
             .then(Commands.argument("world", StringArgumentType.string())
-                .suggests((context, builder) -> {
-                    allMaps.keySet().forEach(name -> {
-                        builder.suggest("\"" +
-                                Paths.toString(path(GameMap.path).relativize(path(name)))
-                        + "\"");
-                    });
+                .suggests((ctx, builder) -> {
+                    maps.keySet().forEach(name -> builder.suggest("\"" + shortName(name) + "\""));
                     return builder.buildFuture();
                 })
-                .executes(context -> {
-                    CommandSender sender = context.getSource().getSender();
+                .executes(ctx -> {
+                    CommandSender sender = ctx.getSource().getSender();
                     if (!(sender instanceof Player player)) {
                         sender.sendMessage(Component.text("Only players can use this command!")
                                 .color(NamedTextColor.RED));
                         return 0;
                     }
 
-                    String mapName = StringArgumentType.getString(context, "world");
-                    String map = Paths.toString(path(GameMap.path).resolve(mapName));
-
-                    if (!allMaps.containsKey(map)) {
-                        sender.sendMessage(Component.text("Couldn't find map" + map + "!")
+                    String map = StringArgumentType.getString(ctx, "world");
+                    if (!maps.containsKey(fullName(map))) {
+                        sender.sendMessage(Component.text("Couldn't find map " + map + "!")
                                 .color(NamedTextColor.RED));
                         return 0;
                     }
@@ -173,9 +172,8 @@ public class MapManager implements LeaveWorldListener {
                 .executes(ctx -> {
                     CommandSender sender = ctx.getSource().getSender();
 
-                    String mapName = StringArgumentType.getString(ctx, "world");
-                    String map = Paths.toString(path(GameMap.path).resolve(mapName));
-                    if (!allMaps.containsKey(map)) {
+                    String map = StringArgumentType.getString(ctx, "world");
+                    if (!maps.containsKey(fullName(map))) {
                         sender.sendMessage(Component.text("Couldn't find map " + map + "!")
                                 .color(NamedTextColor.RED));
                         return 0;
@@ -199,12 +197,10 @@ public class MapManager implements LeaveWorldListener {
             maybeMap.ifPresent(editor -> {
                 editor.onLeave(event.player());
                 if (event.playersRemaining() == 0) {
-                    plugin.getLogger().info("Saving " + editor.map.copyName + ", no players left");
+                    plugin.getLogger().info("Saving " + editor.map.copyName() + ", no players left");
                     editorMaps.remove(event.world().getName());
                     editor.sidebar.close();
-                    editor.map.save(() -> {
-                        plugin.getLogger().info("Saved " + editor.map.copyName);
-                    });
+                    editor.map.save(() -> plugin.getLogger().info("Saved " + editor.map.copyName()));
                 }
             });
         }

@@ -1,6 +1,5 @@
 package bnjmn21.minigames;
 
-import bnjmn21.minigames.util.LeaveWorldListener;
 import com.mojang.brigadier.Command;
 import com.mojang.brigadier.tree.LiteralCommandNode;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
@@ -15,23 +14,26 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerRespawnEvent;
 
+import javax.annotation.Nonnull;
+
 public class Lobby implements Listener {
-    public World world;
-    public Minigames plugin;
+    @Nonnull
+    public final World world;
+    public final Minigames plugin;
 
     Lobby(Minigames plugin) {
         this.plugin = plugin;
-        this.world = new WorldCreator("lobby").createWorld();
-        if (this.world == null) {
+        World world =  new WorldCreator("lobby").createWorld();
+        if (world == null) {
             throw new RuntimeException("Failed to load lobby world!");
         }
+        this.world = world;
 
         this.plugin.getServer().getPluginManager().registerEvents(this, this.plugin);
         plugin.getLogger().info("Lobby world loaded.");
     }
 
     public void teleportToLobby(Player player) {
-        if (world == null) return;
         player.teleport(world.getSpawnLocation());
         applyLobbyState(player);
     }
@@ -57,9 +59,7 @@ public class Lobby implements Listener {
         if (event.getPlayer().getLocation().getWorld() == world) {
             Player player = event.getPlayer();
 
-            Bukkit.getScheduler().runTask(plugin, () -> {
-                applyLobbyState(player);
-            });
+            Bukkit.getScheduler().runTask(plugin, () -> applyLobbyState(player));
         }
     }
 

@@ -11,14 +11,12 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.persistence.PersistentDataAdapterContext;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 import java.nio.ByteBuffer;
 import java.util.function.BiConsumer;
-import java.util.function.Function;
 
 public class IntegerPdt implements MapDataType<Integer> {
-    public static IntegerPdt INSTANCE = new IntegerPdt();
+    public static final IntegerPdt INSTANCE = new IntegerPdt();
 
     private IntegerPdt() {}
 

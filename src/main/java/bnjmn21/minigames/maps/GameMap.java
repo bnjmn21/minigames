@@ -2,6 +2,7 @@ package bnjmn21.minigames.maps;
 
 import bnjmn21.minigames.Game;
 import bnjmn21.minigames.Minigames;
+import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.World;
 import org.bukkit.WorldCreator;
@@ -22,15 +23,16 @@ import static bnjmn21.minigames.util.Paths.path;
 public class GameMap {
     public final String name;
     public final Game game;
+    public final Component displayName;
     private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
     private final ArrayList<String> currentlyCopying = new ArrayList<>();
     private final ReentrantReadWriteLock currentlyCopyingLock = new ReentrantReadWriteLock();
     private final Minigames plugin;
-    public final static String path = "maps";
 
-    public GameMap(String name, Game game, Minigames plugin) {
+    public GameMap(String name, Game game, Component displayName, Minigames plugin) {
         this.name = name;
         this.game = game;
+        this.displayName = displayName;
         this.plugin = plugin;
     }
 
@@ -128,19 +130,7 @@ public class GameMap {
      * A writeable copy of a map, e.g., for editing
      * You must call {@link Writeable#save} when the map is no longer used.
      */
-    public static class Writeable {
-        public final String copyName;
-        public final World world;
-        public final GameMap original;
-        private final Minigames plugin;
-
-        private Writeable(String copyName, World world, GameMap original, Minigames plugin) {
-            this.copyName = copyName;
-            this.world = world;
-            this.original = original;
-            this.plugin = plugin;
-        }
-
+    public record Writeable(String copyName, World world, GameMap original, Minigames plugin) {
         /**
          * Recovers a {@link Writeable} that wasn't correctly saved, e.g., after a server crash
          */
@@ -192,7 +182,7 @@ public class GameMap {
 
     }
 
-    private static void deleteDirectory(Path dir) {
+    public static void deleteDirectory(Path dir) {
         if (!Files.exists(dir)) return;
 
         try {

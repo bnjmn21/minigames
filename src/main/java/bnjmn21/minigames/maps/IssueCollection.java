@@ -5,7 +5,7 @@ public interface IssueCollection {
     String plural();
 
     class UnsetField implements IssueCollection {
-        public static UnsetField INSTANCE = new UnsetField();
+        public static final UnsetField INSTANCE = new UnsetField();
 
         private UnsetField() {}
 
@@ -21,7 +21,7 @@ public interface IssueCollection {
     }
 
     class WrongGameRule implements IssueCollection {
-        public static WrongGameRule INSTANCE = new WrongGameRule();
+        public static final WrongGameRule INSTANCE = new WrongGameRule();
 
         private WrongGameRule() {}
 

@@ -7,10 +7,9 @@ import bnjmn21.minigames.data.MapDataField;
 import bnjmn21.minigames.data.data_types.IVec3;
 import bnjmn21.minigames.data.data_types.IVec3Pdt;
 import bnjmn21.minigames.data.data_types.IntegerPdt;
-import com.mojang.brigadier.tree.LiteralCommandNode;
-import io.papermc.paper.command.brigadier.CommandSourceStack;
 import net.kyori.adventure.text.Component;
 import org.bukkit.GameRule;
+import org.bukkit.persistence.PersistentDataContainer;
 
 public class TheBridgeMap {
     public final MapDataField<IVec3> center;
@@ -19,11 +18,27 @@ public class TheBridgeMap {
     public final MapDataField<IVec3> redGoal;
     public final MapDataField<IVec3> blueSpawn;
     public final MapDataField<IVec3> blueGoal;
-    public final LiteralCommandNode<CommandSourceStack> command;
     public final MapDataBuilder data;
 
+    record Data(
+            IVec3 center, Integer buildLimit,
+            IVec3 redSpawn, IVec3 redGoal,
+            IVec3 blueSpawn, IVec3 blueGoal
+            ) {
+        public Data(PersistentDataContainer pdc, TheBridgeMap fields) {
+            this(
+                    fields.center.get(pdc),
+                    fields.buildLimit.get(pdc),
+                    fields.redSpawn.get(pdc),
+                    fields.redGoal.get(pdc),
+                    fields.blueSpawn.get(pdc),
+                    fields.blueGoal.get(pdc)
+            );
+        }
+    }
+
     public TheBridgeMap(Minigames plugin) {
-        MapDataBuilder builder = new MapDataBuilder(Game.TheBridge, plugin);
+        MapDataBuilder builder = new MapDataBuilder(plugin);
         center = builder.add("center", IVec3Pdt.INSTANCE);
         buildLimit = builder.add("buildLimit", IntegerPdt.INSTANCE);
         redSpawn = builder.add("redSpawn", IVec3Pdt.INSTANCE);
@@ -60,8 +75,7 @@ public class TheBridgeMap {
         builder.addGameRule(GameRule.SPECTATORS_GENERATE_CHUNKS, false);
         builder.addGameRule(GameRule.WATER_SOURCE_CONVERSION, false);
         builder.addGameRule(GameRule.TNT_EXPLODES, false);
-
-        command = builder.buildCommand("the_bridge_edit", Component.text(
+        builder.setHelp(Component.text(
         """
                 
                 --- Required fields ---

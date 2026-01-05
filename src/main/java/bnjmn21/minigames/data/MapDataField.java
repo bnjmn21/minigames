@@ -3,10 +3,8 @@ package bnjmn21.minigames.data;
 import bnjmn21.minigames.Minigames;
 import com.mojang.brigadier.context.CommandContext;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
-import net.kyori.adventure.text.Component;
 import org.bukkit.NamespacedKey;
 import org.bukkit.persistence.PersistentDataContainer;
-import org.bukkit.persistence.PersistentDataType;
 
 public class MapDataField<T> {
     public final NamespacedKey key;

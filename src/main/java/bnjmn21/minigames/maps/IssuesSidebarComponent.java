@@ -5,13 +5,7 @@ import net.megavex.scoreboardlibrary.api.sidebar.component.LineDrawable;
 import net.megavex.scoreboardlibrary.api.sidebar.component.SidebarComponent;
 import org.jetbrains.annotations.NotNull;
 
-public class IssuesSidebarComponent implements SidebarComponent {
-    private final Editor editor;
-
-    public IssuesSidebarComponent(Editor editor) {
-        this.editor = editor;
-    }
-
+public record IssuesSidebarComponent(Editor editor) implements SidebarComponent {
     @Override
     public void draw(@NotNull LineDrawable drawable) {
         Issues issues = editor.validate();

@@ -23,15 +23,13 @@ public class Editor {
 
     public Editor(GameMap.Writeable map, Minigames plugin) {
         this.map = map;
-        this.mapData = plugin.getGameMapData(map.original.game);
+        this.mapData = plugin.getGameType(map.original().game).getMapData();
         this.sidebar = plugin.scoreboardLibrary.createSidebar(15);
         SidebarComponent.Builder sidebarComponent = SidebarComponent.builder();
-        if (this.mapData.commandName != null) {
-            sidebarComponent = sidebarComponent.addStaticLine(
-                    Component.text("Editor command: ").color(NamedTextColor.GRAY)
-                            .append(Component.text("/" + this.mapData.commandName).color(NamedTextColor.WHITE))
-            ).addBlankLine();
-        }
+        sidebarComponent = sidebarComponent.addStaticLine(
+                Component.text("Editing: ").color(NamedTextColor.GRAY)
+                        .append(this.map.original().displayName.color(NamedTextColor.WHITE))
+        ).addBlankLine();
         this.sidebarComponent = sidebarComponent
                 .addComponent(new IssuesSidebarComponent(this))
                 .build();
@@ -48,21 +46,19 @@ public class Editor {
 
     public Issues validate() {
         Issues issues = new Issues();
-        var pdc = map.world.getPersistentDataContainer();
+        var pdc = map.world().getPersistentDataContainer();
         for (MapDataField<?> field : mapData.fields) {
             if (!pdc.has(field.key)) {
                 issues.addError(IssueCollection.UnsetField.INSTANCE, field.key.getKey());
             }
         }
-        mapData.gameRules.validate(map.world, issues);
+        mapData.gameRules.validate(map.world(), issues);
         return issues;
     }
 
     public void onMapChange() {
         if (!disableUpdates) {
-            Bukkit.getScheduler().runTask(plugin, () -> {
-                sidebarLayout.apply(sidebar);
-            });
+            Bukkit.getScheduler().runTask(plugin, () -> sidebarLayout.apply(sidebar));
         }
     }
 

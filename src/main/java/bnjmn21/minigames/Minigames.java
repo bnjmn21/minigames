@@ -1,9 +1,6 @@
 package bnjmn21.minigames;
 
-import bnjmn21.minigames.framework.GameCommand;
-import bnjmn21.minigames.framework.GameInstance;
-import bnjmn21.minigames.framework.GameType;
-import bnjmn21.minigames.framework.Settings;
+import bnjmn21.minigames.framework.*;
 import bnjmn21.minigames.maps.TempMaps;
 import bnjmn21.minigames.the_bridge.TheBridge;
 import io.papermc.paper.command.brigadier.Commands;
@@ -14,6 +11,7 @@ import net.megavex.scoreboardlibrary.api.exception.NoPacketAdapterAvailableExcep
 import net.minecraft.server.level.ServerPlayer;
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
+import org.bukkit.NamespacedKey;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.craftbukkit.entity.CraftPlayer;
 import org.bukkit.entity.Player;
@@ -32,6 +30,7 @@ public final class Minigames extends JavaPlugin implements Listener {
     public Lobby lobby;
     public Settings settings;
     public TempMaps tempMaps;
+    public PlayerDataManager playerData;
     public TheBridge theBridge;
     GameInstance.GameListener currentGame;
 
@@ -46,6 +45,7 @@ public final class Minigames extends JavaPlugin implements Listener {
         lobby = new Lobby(this);
         settings = new Settings(Game.TheBridge, this);
         tempMaps = new TempMaps("temp_maps");
+        playerData = new PlayerDataManager();
         theBridge = new TheBridge(this);
         currentGame = new GameInstance.GameListener();
         getServer().getPluginManager().registerEvents(currentGame, this);
@@ -74,6 +74,7 @@ public final class Minigames extends JavaPlugin implements Listener {
         commands.register(lobby.lobbyCommand("hub"), "Teleport to the lobby");
         commands.register(settings.settingsCommand("settings"), "Open the minigame settings");
         commands.register(new GameCommand(theBridge).buildCommand("the_bridge"), "'The Bridge' editor commands");
+        commands.register(theBridge.hotbarEditCommand("the_bridge_hotbar"), "Edit your hotbar for The Bridge");
     }
 
     public void startGame() {
@@ -106,6 +107,7 @@ public final class Minigames extends JavaPlugin implements Listener {
             currentGame.game.stopGame();
         }
         scoreboardLibrary.close();
+        playerData.save();
     }
 
     /**
@@ -135,5 +137,9 @@ public final class Minigames extends JavaPlugin implements Listener {
         player.setGameMode(gameMode);
         player.getInventory().clear();
         player.setFlying(false);
+    }
+
+    public static NamespacedKey ns(String key) {
+        return new NamespacedKey("minigames", key);
     }
 }

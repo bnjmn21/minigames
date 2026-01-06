@@ -11,15 +11,9 @@ import bnjmn21.minigames.maps.GameMap;
 import bnjmn21.minigames.util.LeaveWorldListener;
 import bnjmn21.minigames.util.Scoreboards;
 import com.destroystokyo.paper.event.player.PlayerPostRespawnEvent;
-import io.papermc.paper.datacomponent.DataComponentTypes;
-import io.papermc.paper.datacomponent.item.BlocksAttacks;
-import io.papermc.paper.datacomponent.item.ItemAttributeModifiers;
-import io.papermc.paper.datacomponent.item.UseCooldown;
-import io.papermc.paper.datacomponent.item.blocksattacks.DamageReduction;
-import io.papermc.paper.registry.RegistryKey;
+import com.google.gson.reflect.TypeToken;
 import io.papermc.paper.registry.keys.SoundEventKeys;
-import io.papermc.paper.registry.set.RegistrySet;
-import net.kyori.adventure.key.Key;
+import net.kyori.adventure.audience.Audience;
 import net.kyori.adventure.sound.Sound;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -32,11 +26,9 @@ import net.megavex.scoreboardlibrary.api.sidebar.component.SidebarComponent;
 import org.bukkit.*;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeInstance;
-import org.bukkit.attribute.AttributeModifier;
 import org.bukkit.block.Block;
 import org.bukkit.damage.DamageSource;
 import org.bukkit.damage.DamageType;
-import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Display;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
@@ -47,7 +39,6 @@ import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.player.*;
 import org.bukkit.inventory.EquipmentSlot;
-import org.bukkit.inventory.EquipmentSlotGroup;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.LeatherArmorMeta;
 import org.bukkit.persistence.PersistentDataContainer;
@@ -56,9 +47,7 @@ import org.bukkit.scoreboard.*;
 
 import javax.annotation.Nullable;
 import java.util.*;
-import java.util.stream.Collectors;
 
-@SuppressWarnings("UnstableApiUsage")
 public class TheBridgeGame implements GameInstance {
     private static final int POINTS_TO_WIN = 5;
 
@@ -83,6 +72,8 @@ public class TheBridgeGame implements GameInstance {
     private final DeathSystem deathSystem = new DeathSystem();
     @Nullable private Countdown currentCountdown;
     private Objective hpObjective;
+    private final HashMap<UUID, Integer> playerGoals = new HashMap<>();
+    private final HashMap<UUID, Integer> kills = new HashMap<>();
     private final Minigames plugin;
 
     public TheBridgeGame(Settings settings, Minigames plugin) {
@@ -98,6 +89,7 @@ public class TheBridgeGame implements GameInstance {
                         this.mapName,
                         Component.text("'.")
                 ));
+                return;
             }
             buildMap();
             initTeams(settings);
@@ -145,28 +137,7 @@ public class TheBridgeGame implements GameInstance {
     private void setupPlayer(Player player, boolean blue) {
         Minigames.resetPlayer(player, GameMode.SURVIVAL);
         var inv = player.getInventory();
-        ItemStack sword = new ItemStack(Material.IRON_SWORD);
-        sword.editMeta(meta -> meta.setUnbreakable(true));
-        sword.setData(DataComponentTypes.BLOCKS_ATTACKS, BlocksAttacks.blocksAttacks()
-                .addDamageReduction(DamageReduction.damageReduction().base(0).factor(0.5f).type(RegistrySet.keySet(RegistryKey.DAMAGE_TYPE,
-                        RegistryKey.DAMAGE_TYPE.typedKey(DamageType.PLAYER_ATTACK.key())
-                )).build()).build());
-        sword.setData(DataComponentTypes.ATTRIBUTE_MODIFIERS, ItemAttributeModifiers.itemAttributes()
-                .addModifier(Attribute.ATTACK_DAMAGE, new AttributeModifier(NamespacedKey.minecraft("the_bridge_atk_dmg"), 5.0f, AttributeModifier.Operation.ADD_NUMBER, EquipmentSlotGroup.HAND))
-                .addModifier(Attribute.ATTACK_SPEED, new AttributeModifier(NamespacedKey.minecraft("the_bridge_atk_spd"), 100.0f, AttributeModifier.Operation.ADD_NUMBER, EquipmentSlotGroup.HAND))
-                .build());
-        inv.setItem(0, sword);
-        inv.setItem(1, new ItemStack(blue ? Material.BLUE_TERRACOTTA : Material.RED_TERRACOTTA, 64));
-        ItemStack bow = new ItemStack(Material.BOW);
-        bow.addEnchantment(Enchantment.INFINITY, 1);
-        bow.editMeta(meta -> meta.setUnbreakable(true));
-        bow.setData(DataComponentTypes.USE_COOLDOWN, UseCooldown.useCooldown(2.5f).cooldownGroup(Key.key("bow")).build());
-        inv.setItem(2, bow);
-        inv.setItem(3, new ItemStack(Material.GOLDEN_APPLE, 8));
-        ItemStack pickaxe = new ItemStack(Material.DIAMOND_PICKAXE);
-        pickaxe.addEnchantment(Enchantment.EFFICIENCY, 2);
-        pickaxe.editMeta(meta -> meta.setUnbreakable(true));
-        inv.setItem(4, pickaxe);
+        plugin.playerData.get(player.getUniqueId(), Minigames.ns("the_bridge/hotbar"), new TypeToken<>() {}, HotbarItem.Hotbar::new).apply(inv, blue);
         inv.setItem(9, new ItemStack(Material.ARROW));
         ItemStack boots = new ItemStack(Material.LEATHER_BOOTS);
         boots.editMeta(meta -> {
@@ -405,20 +376,86 @@ public class TheBridgeGame implements GameInstance {
 
         if (redTeam.hasPlayer(event.getPlayer()) && event.getTo().distance(data.blueGoal().center(map)) < 10) {
             redPoints++;
+            playerGoals.put(event.getPlayer().getUniqueId(), playerGoals.computeIfAbsent(event.getPlayer().getUniqueId(), ignored -> 0) + 1);
             if (redPoints >= 5) {
+                winMessage(event.getPlayer(), false);
                 winGame(false);
             } else {
+                goalMessage(event.getPlayer(), false);
                 startRound(event.getPlayer().teamDisplayName().color(NamedTextColor.RED).append(Component.text(" scored!")));
             }
         } else if (blueTeam.hasPlayer(event.getPlayer()) && event.getFrom().distance(data.redGoal().center(map)) < 10) {
             bluePoints++;
+            playerGoals.put(event.getPlayer().getUniqueId(), playerGoals.computeIfAbsent(event.getPlayer().getUniqueId(), ignored -> 0) + 1);
             if (bluePoints >= 5) {
+                winMessage(event.getPlayer(), true);
                 winGame(true);
             } else {
+                goalMessage(event.getPlayer(), true);
                 startRound(event.getPlayer().teamDisplayName().color(NamedTextColor.BLUE).append(Component.text(" scored!")));
             }
         }
         sidebarLayout.apply(sidebar);
+    }
+
+    private void goalMessage(Player player, boolean blue) {
+        NamedTextColor color = blue ? NamedTextColor.BLUE : NamedTextColor.RED;
+        sendHr(map);
+        map.sendMessage(Component.text("Goal by ", color).append(
+                player.teamDisplayName(),
+                Component.text("! "),
+                Component.text(String.format(" (%.1f HP)", player.getHealth()), NamedTextColor.GREEN)
+        ));
+        int goals = playerGoals.get(player.getUniqueId());
+        if (goals == 1) {
+            map.sendMessage(Component.text("(1st Goal)", NamedTextColor.GOLD));
+        } else if (goals == 2) {
+            map.sendMessage(Component.text("(2nd Goal)", NamedTextColor.GOLD));
+        } else if (goals == 3) {
+            map.sendMessage(Component.text("(3rd Goal)", NamedTextColor.GOLD));
+        } else {
+            map.sendMessage(Component.text("(" + goals + "th Goal)", NamedTextColor.GOLD));
+        }
+        sendHr(map);
+    }
+
+    private void winMessage(Player player, boolean blue) {
+        NamedTextColor color = blue ? NamedTextColor.BLUE : NamedTextColor.RED;
+        String name = blue ? "Blue" : "Red";
+        map.sendMessage(Component.empty());
+        sendHr(map);
+        map.sendMessage(Component.text("Goal by ", color).append(
+                player.teamDisplayName(),
+                Component.text("! "),
+                Component.text(String.format(" (%.1f HP)", player.getHealth()), NamedTextColor.GREEN)
+        ));
+        int goals = playerGoals.get(player.getUniqueId());
+        if (goals == 1) {
+            map.sendMessage(Component.text("(1st Goal)", NamedTextColor.GOLD));
+        } else if (goals == 2) {
+            map.sendMessage(Component.text("(2nd Goal)", NamedTextColor.GOLD));
+        } else if (goals == 3) {
+            map.sendMessage(Component.text("(3rd Goal)", NamedTextColor.GOLD));
+        } else {
+            map.sendMessage(Component.text("(" + goals + "th Goal)", NamedTextColor.GOLD));
+        }
+        map.sendMessage(Component.empty());
+        map.sendMessage(Component.text(name + " won the round!", color).decorate(TextDecoration.BOLD));
+        var mostKills = kills.entrySet().stream().max(Comparator.comparingInt(Map.Entry::getValue));
+        if (mostKills.isPresent()) {
+            Player mostKillsPlayer = Bukkit.getPlayer(mostKills.get().getKey());
+            if (mostKillsPlayer != null) {
+                map.sendMessage(Component.text("Most kills: ", NamedTextColor.GOLD).append(
+                        mostKillsPlayer.teamDisplayName(),
+                        Component.text(" - " + mostKills.get().getValue(), NamedTextColor.GOLD)
+                ));
+            }
+        }
+        sendHr(map);
+    }
+
+    private static void sendHr(Audience aud) {
+        aud.sendMessage(Component.text("▬".repeat(50), NamedTextColor.GREEN));
     }
 
     @Override
@@ -439,6 +476,7 @@ public class TheBridgeGame implements GameInstance {
                     map.sendMessage(deathMessage(player, event.getDamageSource().getDamageType(), assists));
                 }
                 for (Player assist : assists) {
+                    kills.put(assist.getUniqueId(), kills.computeIfAbsent(assist.getUniqueId(), ignored -> 0) + 1);
                     assist.playSound(Sound.sound(SoundEventKeys.ENTITY_ARROW_HIT_PLAYER.key(), Sound.Source.MASTER, 1, 1));
                 }
             }
@@ -594,8 +632,5 @@ public class TheBridgeGame implements GameInstance {
             entity.setVisibleByDefault(false);
         });
         visibleToSpectators.add(spectatorGoalText);
-        plugin.getLogger().info(visibleToRed.stream().map(Entity::toString).collect(Collectors.joining(", ")));
-        plugin.getLogger().info(visibleToBlue.stream().map(Entity::toString).collect(Collectors.joining(", ")));
-        plugin.getLogger().info(visibleToSpectators.stream().map(Entity::toString).collect(Collectors.joining(", ")));
     }
 }

@@ -1,5 +1,6 @@
 package bnjmn21.minigames.framework;
 
+import net.kyori.adventure.sound.Sound;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.title.Title;
@@ -47,5 +48,6 @@ public class Countdown {
 
     private void show(int num, int fadeInTicks) {
         world.showTitle(Title.title(Component.text(num, NamedTextColor.GREEN), subtitle, fadeInTicks, 9999, 0));
+        world.playSound(Sound.sound().type(org.bukkit.Sound.BLOCK_NOTE_BLOCK_HAT).build());
     }
 }

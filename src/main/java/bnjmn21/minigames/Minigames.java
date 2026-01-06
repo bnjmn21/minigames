@@ -22,6 +22,9 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerChangedWorldEvent;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.potion.PotionEffect;
+import org.bukkit.scoreboard.Objective;
+import org.bukkit.scoreboard.Scoreboard;
+import org.bukkit.scoreboard.Team;
 import org.jetbrains.annotations.NotNull;
 
 public final class Minigames extends JavaPlugin implements Listener {
@@ -49,6 +52,11 @@ public final class Minigames extends JavaPlugin implements Listener {
 
         getServer().getPluginManager().registerEvents(this, this);
         getLifecycleManager().registerEventHandler(LifecycleEvents.COMMANDS, this::registerCommands);
+
+        Scoreboard board = Bukkit.getScoreboardManager().getMainScoreboard();
+        board.getTeams().forEach(Team::unregister);
+        board.getObjectives().forEach(Objective::unregister);
+
         getLogger().info("Loaded Minigames");
     }
 
@@ -69,6 +77,9 @@ public final class Minigames extends JavaPlugin implements Listener {
     }
 
     public void startGame() {
+        if (currentGame.game != null) {
+            currentGame.game.stopGame();
+        }
         currentGame.game = getGameType(settings.game).start(settings);
     }
 
@@ -91,6 +102,9 @@ public final class Minigames extends JavaPlugin implements Listener {
 
     @Override
     public void onDisable() {
+        if (currentGame.game != null) {
+            currentGame.game.stopGame();
+        }
         scoreboardLibrary.close();
     }
 

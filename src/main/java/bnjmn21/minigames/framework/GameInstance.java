@@ -8,7 +8,6 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
-import org.bukkit.event.entity.EntityPortalEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.player.*;
 
@@ -16,17 +15,17 @@ import javax.annotation.Nullable;
 
 public interface GameInstance {
     World getWorld();
+    void stopGame();
     default void onPlayerLeaveWorld(LeaveWorldListener.LeaveWorldEvent event) {}
     default void onBlockPlace(BlockPlaceEvent event) {}
     default void onBlockBreak(BlockBreakEvent event) {}
-    default void onEntityPortal(EntityPortalEvent event) {}
-    default void onPlayerPortal(PlayerPortalEvent event) {}
     default void onPlayerDropItem(PlayerDropItemEvent event) {}
     default void onInventoryClick(InventoryClickEvent event) {}
     default void onPlayerRespawn(PlayerRespawnEvent event) {}
     default void onPlayerPostRespawn(PlayerPostRespawnEvent event) {}
     default void onPlayerMove(PlayerMoveEvent event) {}
     default void onEntityDamage(EntityDamageEvent event) {}
+    default void onPlayerItemConsume(PlayerItemConsumeEvent event) {}
     default void tick() {}
 
     class GameListener implements LeaveWorldListener {
@@ -51,20 +50,6 @@ public interface GameInstance {
         public void onBlockBreak(BlockBreakEvent event) {
             if (game != null && game.getWorld() == event.getBlock().getWorld()) {
                 game.onBlockBreak(event);
-            }
-        }
-
-        @EventHandler
-        public void onEntityPortal(EntityPortalEvent event) {
-            if (game != null && game.getWorld() == event.getFrom().getWorld()) {
-                game.onEntityPortal(event);
-            }
-        }
-
-        @EventHandler
-        public void onPlayerPortal(PlayerPortalEvent event) {
-            if (game != null && game.getWorld() == event.getFrom().getWorld()) {
-                game.onPlayerPortal(event);
             }
         }
 
@@ -107,6 +92,13 @@ public interface GameInstance {
         public void onEntityDamage(EntityDamageEvent event) {
             if (game != null && game.getWorld() == event.getEntity().getWorld()) {
                 game.onEntityDamage(event);
+            }
+        }
+
+        @EventHandler
+        public void onPlayerItemConsume(PlayerItemConsumeEvent event) {
+            if (game != null && game.getWorld() == event.getPlayer().getWorld()) {
+                game.onPlayerItemConsume(event);
             }
         }
 

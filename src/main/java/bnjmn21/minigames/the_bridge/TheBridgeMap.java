@@ -1,6 +1,5 @@
 package bnjmn21.minigames.the_bridge;
 
-import bnjmn21.minigames.Game;
 import bnjmn21.minigames.Minigames;
 import bnjmn21.minigames.data.MapDataBuilder;
 import bnjmn21.minigames.data.MapDataField;
@@ -10,6 +9,8 @@ import bnjmn21.minigames.data.data_types.IntegerPdt;
 import net.kyori.adventure.text.Component;
 import org.bukkit.GameRule;
 import org.bukkit.persistence.PersistentDataContainer;
+
+import java.util.Objects;
 
 public class TheBridgeMap {
     public final MapDataField<IVec3> center;
@@ -27,12 +28,12 @@ public class TheBridgeMap {
             ) {
         public Data(PersistentDataContainer pdc, TheBridgeMap fields) {
             this(
-                    fields.center.get(pdc),
-                    fields.buildLimit.get(pdc),
-                    fields.redSpawn.get(pdc),
-                    fields.redGoal.get(pdc),
-                    fields.blueSpawn.get(pdc),
-                    fields.blueGoal.get(pdc)
+                    Objects.requireNonNull(fields.center.get(pdc)),
+                    Objects.requireNonNull(fields.buildLimit.get(pdc)),
+                    Objects.requireNonNull(fields.redSpawn.get(pdc)),
+                    Objects.requireNonNull(fields.redGoal.get(pdc)),
+                    Objects.requireNonNull(fields.blueSpawn.get(pdc)),
+                    Objects.requireNonNull(fields.blueGoal.get(pdc))
             );
         }
     }

@@ -6,6 +6,8 @@ import bnjmn21.minigames.the_bridge.TheBridge;
 import io.papermc.paper.command.brigadier.Commands;
 import io.papermc.paper.plugin.lifecycle.event.registrar.ReloadableRegistrarEvent;
 import io.papermc.paper.plugin.lifecycle.event.types.LifecycleEvents;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
 import net.megavex.scoreboardlibrary.api.ScoreboardLibrary;
 import net.megavex.scoreboardlibrary.api.exception.NoPacketAdapterAvailableException;
 import net.minecraft.server.level.ServerPlayer;
@@ -137,9 +139,25 @@ public final class Minigames extends JavaPlugin implements Listener {
         player.setGameMode(gameMode);
         player.getInventory().clear();
         player.setFlying(false);
+
+        player.clearTitle();
     }
 
     public static NamespacedKey ns(String key) {
         return new NamespacedKey("minigames", key);
+    }
+
+    public void gameFinished() {
+        final int autostartDelay = 10;
+        if (this.settings.autoStart) {
+            if (this.currentGame.game != null) {
+                this.currentGame.game.getWorld().sendMessage(Component.text("Starting next game in " + autostartDelay + " seconds...", NamedTextColor.GREEN));
+                Bukkit.getScheduler().runTaskLater(this, () -> {
+                    if (this.settings.autoStart) {
+                        startGame();
+                    }
+                }, autostartDelay * 20);
+            }
+        }
     }
 }

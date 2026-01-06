@@ -303,6 +303,7 @@ public class TheBridgeGame implements GameInstance {
         } else {
             map.showTitle(Title.title(Component.text("Red won the game!", NamedTextColor.RED), Component.empty(), 10, 100, 10));
         }
+        plugin.gameFinished();
     }
 
     @Override

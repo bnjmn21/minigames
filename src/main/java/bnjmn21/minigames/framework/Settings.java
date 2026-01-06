@@ -35,6 +35,7 @@ public class Settings {
     @Nullable
     public GameMap selectedMap;
     public HashMap<UUID, Team> teams;
+    public boolean autoStart = true;
     private final Minigames plugin;
 
     public Settings(Game game, Minigames plugin) {
@@ -131,6 +132,21 @@ public class Settings {
                         ClickCallback.Options.builder().build()
                 )
         );
+        ActionButton autoStartButton = ActionButton.create(
+                Component.text("Autostart: ", NamedTextColor.WHITE).append(autoStart ?
+                        Component.text("Enabled", NamedTextColor.GREEN)
+                        : Component.text("Disabled", NamedTextColor.RED)
+                        ),
+                null,
+                BUTTON_WIDTH,
+                DialogAction.customClick(
+                        (response, audience) -> {
+                            autoStart = !autoStart;
+                            audience.showDialog(this.settingsDialog());
+                        },
+                        ClickCallback.Options.builder().build()
+                )
+        );
         ActionButton startGameButton = ActionButton.create(
                 Component.text("Start Game", NamedTextColor.GREEN),
                 null,
@@ -147,6 +163,7 @@ public class Settings {
                         gameDropdown.button,
                         mapDropdown.button,
                         teamsDialogButton,
+                        autoStartButton,
                         startGameButton
                 ),
                 1, null

@@ -29,10 +29,7 @@ import org.bukkit.attribute.AttributeInstance;
 import org.bukkit.block.Block;
 import org.bukkit.damage.DamageSource;
 import org.bukkit.damage.DamageType;
-import org.bukkit.entity.Display;
-import org.bukkit.entity.Entity;
-import org.bukkit.entity.Player;
-import org.bukkit.entity.TextDisplay;
+import org.bukkit.entity.*;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
@@ -40,6 +37,7 @@ import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.player.*;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.FireworkMeta;
 import org.bukkit.inventory.meta.LeatherArmorMeta;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.potion.PotionEffectType;
@@ -54,8 +52,8 @@ public class TheBridgeGame implements GameInstance {
     private World map;
     private final Component mapName;
     private String gameName;
-    private int redPoints = 0;
-    private int bluePoints = 0;
+    public int redPoints = 0;
+    public int bluePoints = 0;
     private final ArrayList<Entity> visibleToRed = new ArrayList<>();
     private final ArrayList<Entity> visibleToBlue = new ArrayList<>();
     private final ArrayList<Entity> visibleToSpectators = new ArrayList<>();
@@ -304,6 +302,20 @@ public class TheBridgeGame implements GameInstance {
             map.showTitle(Title.title(Component.text("Red won the game!", NamedTextColor.RED), Component.empty(), 10, 100, 10));
         }
         plugin.gameFinished();
+        Location red_goal = data.redGoal().center(map);
+        map.spawn(red_goal.add(0, 20, 0), Firework.class, entity -> {
+            entity.setTicksToDetonate(20);
+            FireworkMeta meta = entity.getFireworkMeta();
+            meta.addEffect(FireworkEffect.builder().with(FireworkEffect.Type.BALL).withColor(blue ? Color.BLUE : Color.RED).flicker(true).trail(true).build());
+            entity.setFireworkMeta(meta);
+        });
+        Location blue_goal = data.blueGoal().center(map);
+        map.spawn(blue_goal.add(0, 20, 0), Firework.class, entity -> {
+            entity.setTicksToDetonate(20);
+            FireworkMeta meta = entity.getFireworkMeta();
+            meta.addEffect(FireworkEffect.builder().with(FireworkEffect.Type.BALL).withColor(blue ? Color.BLUE : Color.RED).flicker(true).trail(true).build());
+            entity.setFireworkMeta(meta);
+        });
     }
 
     @Override
@@ -506,7 +518,7 @@ public class TheBridgeGame implements GameInstance {
     public void onPlayerItemConsume(PlayerItemConsumeEvent event) {
         if (event.getItem().getType() == Material.GOLDEN_APPLE) {
             event.setCancelled(true);
-            event.getPlayer().addPotionEffect(PotionEffectType.ABSORPTION.createEffect(60, 0));
+            event.getPlayer().addPotionEffect(PotionEffectType.ABSORPTION.createEffect(30 * 20, 0));
             event.getPlayer().setHealth(Optional.ofNullable(event.getPlayer().getAttribute(Attribute.MAX_HEALTH)).map(AttributeInstance::getValue).orElse(20.0));
         }
     }
@@ -539,6 +551,9 @@ public class TheBridgeGame implements GameInstance {
         } else if (damageType == DamageType.ARROW) {
             //noinspection DataFlowIssue
             return player.teamDisplayName().append(gray(" was shot by "), killer, gray("."));
+        } else if (damageType == DamageType.MACE_SMASH) {
+            //noinspection DataFlowIssue
+            return player.teamDisplayName().append(gray(" got absolutely fucking obliterated by "), killer, gray("."));
         } else {
             return player.teamDisplayName().append(gray(" died."));
         }

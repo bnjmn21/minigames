@@ -34,7 +34,7 @@ public final class Minigames extends JavaPlugin implements Listener {
     public TempMaps tempMaps;
     public PlayerDataManager playerData;
     public TheBridge theBridge;
-    GameInstance.GameListener currentGame;
+    public GameInstance.GameListener currentGame;
 
     @Override
     public void onEnable() {

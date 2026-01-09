@@ -35,6 +35,7 @@ public final class Minigames extends JavaPlugin implements Listener {
     public PlayerDataManager playerData;
     public TheBridge theBridge;
     public GameInstance.GameListener currentGame;
+    public Ranks ranks;
 
     @Override
     public void onEnable() {
@@ -44,20 +45,21 @@ public final class Minigames extends JavaPlugin implements Listener {
             throw new RuntimeException(e);
         }
 
+        Scoreboard board = Bukkit.getScoreboardManager().getMainScoreboard();
+        board.getTeams().forEach(Team::unregister);
+        board.getObjectives().forEach(Objective::unregister);
+
         lobby = new Lobby(this);
         settings = new Settings(Game.TheBridge, this);
         tempMaps = new TempMaps("temp_maps");
         playerData = new PlayerDataManager();
         theBridge = new TheBridge(this);
         currentGame = new GameInstance.GameListener();
+        ranks = new Ranks(playerData);
         getServer().getPluginManager().registerEvents(currentGame, this);
 
         getServer().getPluginManager().registerEvents(this, this);
         getLifecycleManager().registerEventHandler(LifecycleEvents.COMMANDS, this::registerCommands);
-
-        Scoreboard board = Bukkit.getScoreboardManager().getMainScoreboard();
-        board.getTeams().forEach(Team::unregister);
-        board.getObjectives().forEach(Objective::unregister);
 
         getLogger().info("Loaded Minigames");
     }

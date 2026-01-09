@@ -4,15 +4,16 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
 import com.google.gson.reflect.TypeToken;
+import com.mojang.datafixers.util.Pair;
 import org.bukkit.NamespacedKey;
 
 import java.io.*;
 import java.lang.reflect.Type;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.HashMap;
-import java.util.UUID;
+import java.util.*;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
 public class PlayerDataManager {
     public HashMap<UUID, JsonObject> data;
@@ -54,6 +55,12 @@ public class PlayerDataManager {
     public <T> void set(UUID player, NamespacedKey key, TypeToken<T> token, T value) {
         JsonObject playerData = this.data.computeIfAbsent(player, ignored -> new JsonObject());
         playerData.add(key.asString(), gson.toJsonTree(value, token.getType()));
+    }
+
+    public <T> Set<Pair<UUID, T>> getAll(NamespacedKey key, TypeToken<T> token, Supplier<T> defaultValue) {
+        return this.data.keySet().stream()
+                .map(jsonObject -> Pair.of(jsonObject, get(jsonObject, key, token, defaultValue)))
+                .collect(Collectors.toSet());
     }
 
     public void save() {

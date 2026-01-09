@@ -386,7 +386,7 @@ public class TheBridgeGame implements GameInstance {
             return;
         }
 
-        if ((gameStarted && !gameEnded) && event.getTo().getBlock().getType() != Material.END_PORTAL) {
+        if (!gameStarted || gameEnded || event.getTo().getBlock().getType() != Material.END_PORTAL) {
             return;
         }
 
@@ -531,7 +531,14 @@ public class TheBridgeGame implements GameInstance {
         if (gameEnded
                 && PlainTextComponentSerializer.plainText().serialize(event.originalMessage()).strip().equalsIgnoreCase("gg")
                 && !hasSaidGG.contains(event.getPlayer().getUniqueId())) {
-            Bukkit.getScheduler().runTask(plugin, () -> event.getPlayer().sendMessage(Component.text("+5 Karma!", NamedTextColor.LIGHT_PURPLE)));
+            String rank = plugin.playerData.get(event.getPlayer().getUniqueId(), Minigames.ns("rank"), new TypeToken<>() {}, () -> "none");
+            switch (rank) {
+                case "vip" -> Bukkit.getScheduler().runTask(plugin, () -> event.getPlayer().sendMessage(Component.text("+10 Karma!", NamedTextColor.LIGHT_PURPLE)));
+                case "vip+" -> Bukkit.getScheduler().runTask(plugin, () -> event.getPlayer().sendMessage(Component.text("+15 Karma!", NamedTextColor.LIGHT_PURPLE)));
+                case "mvp" -> Bukkit.getScheduler().runTask(plugin, () -> event.getPlayer().sendMessage(Component.text("+20 Karma!", NamedTextColor.LIGHT_PURPLE)));
+                default -> Bukkit.getScheduler().runTask(plugin, () -> event.getPlayer().sendMessage(Component.text("+5 Karma!", NamedTextColor.LIGHT_PURPLE)));
+            }
+
             hasSaidGG.add(event.getPlayer().getUniqueId());
         }
     }

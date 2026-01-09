@@ -34,6 +34,7 @@ public class Lobby implements Listener {
     }
 
     public void teleportToLobby(Player player) {
+        plugin.ranks.addToTeam(player);
         player.teleport(world.getSpawnLocation());
         applyLobbyState(player);
     }

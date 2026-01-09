@@ -3,6 +3,7 @@ package bnjmn21.minigames.framework;
 import bnjmn21.minigames.util.LeaveWorldListener;
 import com.destroystokyo.paper.event.player.PlayerPostRespawnEvent;
 import com.destroystokyo.paper.event.server.ServerTickEndEvent;
+import io.papermc.paper.event.player.AsyncChatEvent;
 import org.bukkit.World;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.block.BlockBreakEvent;
@@ -26,6 +27,7 @@ public interface GameInstance {
     default void onPlayerMove(PlayerMoveEvent event) {}
     default void onEntityDamage(EntityDamageEvent event) {}
     default void onPlayerItemConsume(PlayerItemConsumeEvent event) {}
+    default void onAsyncChat(AsyncChatEvent event) {}
     default void tick() {}
 
     class GameListener implements LeaveWorldListener {
@@ -99,6 +101,13 @@ public interface GameInstance {
         public void onPlayerItemConsume(PlayerItemConsumeEvent event) {
             if (game != null && game.getWorld() == event.getPlayer().getWorld()) {
                 game.onPlayerItemConsume(event);
+            }
+        }
+
+        @EventHandler
+        public void onAsyncChat(AsyncChatEvent event) {
+            if (game != null && game.getWorld() == event.getPlayer().getWorld()) {
+                game.onAsyncChat(event);
             }
         }
 

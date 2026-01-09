@@ -12,6 +12,7 @@ import bnjmn21.minigames.util.LeaveWorldListener;
 import bnjmn21.minigames.util.Scoreboards;
 import com.destroystokyo.paper.event.player.PlayerPostRespawnEvent;
 import com.google.gson.reflect.TypeToken;
+import io.papermc.paper.event.player.AsyncChatEvent;
 import io.papermc.paper.registry.keys.SoundEventKeys;
 import net.kyori.adventure.audience.Audience;
 import net.kyori.adventure.sound.Sound;
@@ -19,6 +20,7 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
+import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import net.kyori.adventure.title.Title;
 import net.megavex.scoreboardlibrary.api.sidebar.Sidebar;
 import net.megavex.scoreboardlibrary.api.sidebar.component.ComponentSidebarLayout;
@@ -73,6 +75,7 @@ public class TheBridgeGame implements GameInstance {
     private final HashMap<UUID, Integer> playerGoals = new HashMap<>();
     private final HashMap<UUID, Integer> kills = new HashMap<>();
     private final Minigames plugin;
+    private final Set<UUID> hasSaidGG = new HashSet<>();
 
     public TheBridgeGame(Settings settings, Minigames plugin) {
         this.plugin = plugin;
@@ -383,7 +386,7 @@ public class TheBridgeGame implements GameInstance {
             return;
         }
 
-        if (event.getTo().getBlock().getType() != Material.END_PORTAL) {
+        if ((gameStarted && !gameEnded) && event.getTo().getBlock().getType() != Material.END_PORTAL) {
             return;
         }
 
@@ -520,6 +523,16 @@ public class TheBridgeGame implements GameInstance {
             event.setCancelled(true);
             event.getPlayer().addPotionEffect(PotionEffectType.ABSORPTION.createEffect(30 * 20, 0));
             event.getPlayer().setHealth(Optional.ofNullable(event.getPlayer().getAttribute(Attribute.MAX_HEALTH)).map(AttributeInstance::getValue).orElse(20.0));
+        }
+    }
+
+    @Override
+    public void onAsyncChat(AsyncChatEvent event) {
+        if (gameEnded
+                && PlainTextComponentSerializer.plainText().serialize(event.originalMessage()).strip().equalsIgnoreCase("gg")
+                && !hasSaidGG.contains(event.getPlayer().getUniqueId())) {
+            Bukkit.getScheduler().runTask(plugin, () -> event.getPlayer().sendMessage(Component.text("+5 Karma!", NamedTextColor.LIGHT_PURPLE)));
+            hasSaidGG.add(event.getPlayer().getUniqueId());
         }
     }
 

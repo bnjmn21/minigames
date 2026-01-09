@@ -1,6 +1,7 @@
 package bnjmn21.minigames.the_bridge;
 
 import bnjmn21.minigames.Minigames;
+import bnjmn21.minigames.framework.PlayerDataField;
 import com.google.gson.reflect.TypeToken;
 import io.papermc.paper.datacomponent.DataComponentTypes;
 import io.papermc.paper.datacomponent.item.BlocksAttacks;
@@ -42,6 +43,10 @@ public enum HotbarItem {
     Pickaxe(Material.DIAMOND_PICKAXE);
 
     private final Material material;
+
+    public static final PlayerDataField<Hotbar> hotbarField = new PlayerDataField<>(
+            Minigames.ns("the_bridge/hotbar"), new TypeToken<>() {}, Hotbar::new
+    );
 
     HotbarItem(Material material) {
         this.material = material;
@@ -93,7 +98,7 @@ public enum HotbarItem {
         private boolean closed = false;
 
         public Editor(Player player, Minigames plugin, Runnable onClose) {
-            this.hotbar = plugin.playerData.get(player.getUniqueId(), Minigames.ns("the_bridge/hotbar"), new TypeToken<>() {}, Hotbar::new);
+            this.hotbar = plugin.playerData.get(player.getUniqueId(), hotbarField);
             this.player = player.getUniqueId();
             this.inventory = plugin.getServer().createInventory(this, 18, Component.text("Hotbar editor"));
             hotbar.applyEditor(this.inventory);
@@ -151,7 +156,7 @@ public enum HotbarItem {
         private void close(HumanEntity by) {
             closed = true;
             by.closeInventory();
-            plugin.playerData.set(player, Minigames.ns("the_bridge/hotbar"), new TypeToken<>() {}, hotbar);
+            plugin.playerData.set(player, hotbarField, hotbar);
             by.sendMessage(Component.text("Hotbar layout saved!", NamedTextColor.GREEN));
             onClose.run();
 

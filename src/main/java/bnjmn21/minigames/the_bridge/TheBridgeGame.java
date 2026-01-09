@@ -1,6 +1,7 @@
 package bnjmn21.minigames.the_bridge;
 
 import bnjmn21.minigames.Minigames;
+import bnjmn21.minigames.Ranks;
 import bnjmn21.minigames.data.data_types.IVec3;
 import bnjmn21.minigames.framework.Countdown;
 import bnjmn21.minigames.framework.DeathSystem;
@@ -11,7 +12,6 @@ import bnjmn21.minigames.maps.GameMap;
 import bnjmn21.minigames.util.LeaveWorldListener;
 import bnjmn21.minigames.util.Scoreboards;
 import com.destroystokyo.paper.event.player.PlayerPostRespawnEvent;
-import com.google.gson.reflect.TypeToken;
 import io.papermc.paper.event.player.AsyncChatEvent;
 import io.papermc.paper.registry.keys.SoundEventKeys;
 import net.kyori.adventure.audience.Audience;
@@ -138,7 +138,7 @@ public class TheBridgeGame implements GameInstance {
     private void setupPlayer(Player player, boolean blue) {
         Minigames.resetPlayer(player, GameMode.SURVIVAL);
         var inv = player.getInventory();
-        plugin.playerData.get(player.getUniqueId(), Minigames.ns("the_bridge/hotbar"), new TypeToken<>() {}, HotbarItem.Hotbar::new).apply(inv, blue);
+        plugin.playerData.get(player.getUniqueId(), HotbarItem.hotbarField).apply(inv, blue);
         inv.setItem(9, new ItemStack(Material.ARROW));
         ItemStack boots = new ItemStack(Material.LEATHER_BOOTS);
         boots.editMeta(meta -> {
@@ -531,7 +531,7 @@ public class TheBridgeGame implements GameInstance {
         if (gameEnded
                 && PlainTextComponentSerializer.plainText().serialize(event.originalMessage()).strip().equalsIgnoreCase("gg")
                 && !hasSaidGG.contains(event.getPlayer().getUniqueId())) {
-            String rank = plugin.playerData.get(event.getPlayer().getUniqueId(), Minigames.ns("rank"), new TypeToken<>() {}, () -> "none");
+            String rank = plugin.playerData.get(event.getPlayer().getUniqueId(), Ranks.field);
             switch (rank) {
                 case "vip" -> Bukkit.getScheduler().runTask(plugin, () -> event.getPlayer().sendMessage(Component.text("+10 Karma!", NamedTextColor.LIGHT_PURPLE)));
                 case "vip+" -> Bukkit.getScheduler().runTask(plugin, () -> event.getPlayer().sendMessage(Component.text("+15 Karma!", NamedTextColor.LIGHT_PURPLE)));

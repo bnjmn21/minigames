@@ -29,7 +29,19 @@ public class PlayerDataManager {
         }
     }
 
-    public <T> T get(UUID player, NamespacedKey key, TypeToken<T> token, Supplier<T> defaultValue) {
+    public <T> T get(UUID player, PlayerDataField<T> field) {
+        return get(player, field.name, field.type, field.defaultSupplier);
+    }
+
+    public <T> void set(UUID player, PlayerDataField<T> field, T value) {
+        set(player, field.name, field.type, value);
+    }
+
+    public <T> Set<Pair<UUID, T>> getAll(PlayerDataField<T> field) {
+        return getAll(field.name, field.type, field.defaultSupplier);
+    }
+
+    private <T> T get(UUID player, NamespacedKey key, TypeToken<T> token, Supplier<T> defaultValue) {
         String strKey = key.asString();
 
         if (!this.data.containsKey(player)) {
@@ -52,12 +64,12 @@ public class PlayerDataManager {
         return gson.fromJson(playerData.get(strKey), token);
     }
 
-    public <T> void set(UUID player, NamespacedKey key, TypeToken<T> token, T value) {
+    private <T> void set(UUID player, NamespacedKey key, TypeToken<T> token, T value) {
         JsonObject playerData = this.data.computeIfAbsent(player, ignored -> new JsonObject());
         playerData.add(key.asString(), gson.toJsonTree(value, token.getType()));
     }
 
-    public <T> Set<Pair<UUID, T>> getAll(NamespacedKey key, TypeToken<T> token, Supplier<T> defaultValue) {
+    private <T> Set<Pair<UUID, T>> getAll(NamespacedKey key, TypeToken<T> token, Supplier<T> defaultValue) {
         return this.data.keySet().stream()
                 .map(jsonObject -> Pair.of(jsonObject, get(jsonObject, key, token, defaultValue)))
                 .collect(Collectors.toSet());

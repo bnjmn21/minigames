@@ -8,6 +8,7 @@ import bnjmn21.minigames.framework.DeathSystem;
 import bnjmn21.minigames.framework.GameInstance;
 import bnjmn21.minigames.framework.Settings;
 import bnjmn21.minigames.maps.GameMap;
+import bnjmn21.minigames.util.HumanReadableList;
 import bnjmn21.minigames.util.LeaveWorldListener;
 import bnjmn21.minigames.util.Scoreboards;
 import bnjmn21.minigames.util.WorldTools;
@@ -72,8 +73,7 @@ public class TheBridgeGame implements GameInstance {
     private Sidebar sidebar;
     private ComponentSidebarLayout sidebarLayout;
     private TheBridgeMap.Data data;
-    private boolean gameStarted = false;
-    private boolean gameEnded = false;
+    private State state = State.NotStarted;
     private final DeathSystem deathSystem = new DeathSystem();
     @Nullable private Countdown currentCountdown;
     private Objective hpObjective;
@@ -81,6 +81,13 @@ public class TheBridgeGame implements GameInstance {
     private final HashMap<UUID, Integer> kills = new HashMap<>();
     private final Minigames plugin;
     private final Set<UUID> hasSaidGG = new HashSet<>();
+    private final HashMap<UUID, Integer> streaks = new HashMap<>();
+
+    enum State {
+        NotStarted,
+        Started,
+        Ended
+    }
 
     public TheBridgeGame(Settings settings, Minigames plugin) {
         this.plugin = plugin;
@@ -117,7 +124,7 @@ public class TheBridgeGame implements GameInstance {
                 visibleToSpectators.forEach(e -> player.showEntity(plugin, e));
             }
         }
-        gameStarted = true;
+        state = State.Started;
         startRound(Component.empty());
     }
 
@@ -327,7 +334,7 @@ public class TheBridgeGame implements GameInstance {
     }
 
     private void winGame(boolean blue) {
-        gameEnded = true;
+        state = State.Ended;
         for (Player player : map.getPlayers()) {
             Minigames.resetPlayer(player, GameMode.SPECTATOR);
             player.teleport(selectRespawnLocation(player));
@@ -375,7 +382,7 @@ public class TheBridgeGame implements GameInstance {
     }
 
     private Location selectRespawnLocation(Player player) {
-        if (!gameStarted || gameEnded) {
+        if (state != State.Started) {
             return map.getSpawnLocation();
         }
 
@@ -389,26 +396,24 @@ public class TheBridgeGame implements GameInstance {
     }
 
     private void postRespawn(Player player) {
-        if (gameEnded) {
-            Minigames.resetPlayer(player, GameMode.SPECTATOR);
-            return;
-        }
-
-        if (!gameStarted) {
-            if (spectatorTeam.hasPlayer(player)) {
-                Minigames.resetPlayer(player, GameMode.SPECTATOR);
-            } else {
-                Minigames.resetPlayer(player, GameMode.ADVENTURE);
+        switch (state) {
+            case NotStarted -> {
+                if (spectatorTeam.hasPlayer(player)) {
+                    Minigames.resetPlayer(player, GameMode.SPECTATOR);
+                } else {
+                    Minigames.resetPlayer(player, GameMode.ADVENTURE);
+                }
             }
-            return;
-        }
-
-        if (redTeam.hasPlayer(player)) {
-            setupPlayer(player, false);
-        } else if (blueTeam.hasPlayer(player)) {
-            setupPlayer(player, true);
-        } else {
-            Minigames.resetPlayer(player, GameMode.SPECTATOR);
+            case Started -> {
+                if (redTeam.hasPlayer(player)) {
+                    setupPlayer(player, false);
+                } else if (blueTeam.hasPlayer(player)) {
+                    setupPlayer(player, true);
+                } else {
+                    Minigames.resetPlayer(player, GameMode.SPECTATOR);
+                }
+            }
+            case Ended -> Minigames.resetPlayer(player, GameMode.SPECTATOR);
         }
     }
 
@@ -419,7 +424,7 @@ public class TheBridgeGame implements GameInstance {
             return;
         }
 
-        if (!gameStarted || gameEnded || event.getTo().getBlock().getType() != Material.END_PORTAL) {
+        if (state != State.Started || event.getTo().getBlock().getType() != Material.END_PORTAL) {
             return;
         }
 
@@ -521,12 +526,14 @@ public class TheBridgeGame implements GameInstance {
                 event.setCancelled(true);
                 postRespawn(player);
                 player.teleport(selectRespawnLocation(player));
-                if (redTeam.hasPlayer(player) || blueTeam.hasPlayer(player)) {
-                    map.sendMessage(deathMessage(player, event.getDamageSource().getDamageType(), assists));
-                }
                 for (Player assist : assists) {
                     kills.put(assist.getUniqueId(), kills.computeIfAbsent(assist.getUniqueId(), ignored -> 0) + 1);
+                    streaks.put(assist.getUniqueId(), streaks.computeIfAbsent(assist.getUniqueId(), ignored -> 0) + 1);
                     assist.playSound(Sound.sound(SoundEventKeys.ENTITY_ARROW_HIT_PLAYER.key(), Sound.Source.MASTER, 1, 1));
+                }
+                if (redTeam.hasPlayer(player) || blueTeam.hasPlayer(player)) {
+                    streaks.remove(player.getUniqueId());
+                    map.sendMessage(deathMessage(player, event.getDamageSource().getDamageType(), assists));
                 }
             }
         }
@@ -561,7 +568,7 @@ public class TheBridgeGame implements GameInstance {
 
     @Override
     public void onAsyncChat(AsyncChatEvent event) {
-        if (gameEnded
+        if (state == State.Ended
                 && PlainTextComponentSerializer.plainText().serialize(event.originalMessage()).strip().equalsIgnoreCase("gg")
                 && !hasSaidGG.contains(event.getPlayer().getUniqueId())) {
             String rank = plugin.playerData.get(event.getPlayer().getUniqueId(), Ranks.field);
@@ -577,20 +584,7 @@ public class TheBridgeGame implements GameInstance {
     }
 
     private Component deathMessage(Player player, DamageType damageType, List<Player> assists) {
-        Component killer = null;
-        if (assists.size() == 1) {
-            killer = assists.getFirst().teamDisplayName();
-        } else if (assists.size() == 2) {
-            killer = assists.getFirst().teamDisplayName().append(gray(" and "), assists.getLast().teamDisplayName());
-        } else if (assists.size() > 2) {
-            var firstKillers = assists.subList(1, assists.size() - 1).stream()
-                    .map(Player::teamDisplayName).toList();
-            Component res = assists.getFirst().teamDisplayName();
-            for (Component k : firstKillers) {
-                res = res.append(gray(", "), k);
-            }
-            killer = res.append(gray(" and "), assists.getLast().teamDisplayName());
-        }
+        Component killer = HumanReadableList.of(assists.stream().map(this::fmtPlayerWithStreak));
 
         if (damageType == DamageType.OUT_OF_WORLD) {
             if (killer != null) {
@@ -599,16 +593,22 @@ public class TheBridgeGame implements GameInstance {
                 return player.teamDisplayName().append(gray(" fell into the void."));
             }
         } else if (damageType == DamageType.PLAYER_ATTACK) {
-            //noinspection DataFlowIssue
             return player.teamDisplayName().append(gray(" was killed by "), killer, gray("."));
         } else if (damageType == DamageType.ARROW) {
-            //noinspection DataFlowIssue
             return player.teamDisplayName().append(gray(" was shot by "), killer, gray("."));
         } else if (damageType == DamageType.MACE_SMASH) {
-            //noinspection DataFlowIssue
             return player.teamDisplayName().append(gray(" got absolutely fucking obliterated by "), killer, gray("."));
         } else {
             return player.teamDisplayName().append(gray(" died."));
+        }
+    }
+
+    private Component fmtPlayerWithStreak(Player player) {
+        int streak = streaks.getOrDefault(player.getUniqueId(), 0);
+        if (streak > 3) {
+            return player.teamDisplayName().append(Component.text(" (" + streak + "X STREAK)", NamedTextColor.YELLOW).decorate(TextDecoration.BOLD));
+        } else {
+            return player.teamDisplayName();
         }
     }
 

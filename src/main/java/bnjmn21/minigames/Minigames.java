@@ -76,9 +76,9 @@ public final class Minigames extends JavaPlugin implements Listener {
         commands.register(lobby.lobbyCommand("l"), "Teleport to the lobby");
         commands.register(lobby.lobbyCommand("lobby"), "Teleport to the lobby");
         commands.register(lobby.lobbyCommand("hub"), "Teleport to the lobby");
-        commands.register(settings.settingsCommand("settings"), "Open the minigame settings");
+        commands.register(settings.settingsCommand("game"), "Open the minigame settings");
         commands.register(new GameCommand(theBridge).buildCommand("the_bridge"), "'The Bridge' editor commands");
-        commands.register(theBridge.hotbarEditCommand("the_bridge_hotbar"), "Edit your hotbar for The Bridge");
+        commands.register(PlayerSettings.playerSettingsCommand("settings", this), "Open the player settings");
     }
 
     public void startGame() {

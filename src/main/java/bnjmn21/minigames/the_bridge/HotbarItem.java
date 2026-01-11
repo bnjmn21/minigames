@@ -32,6 +32,8 @@ import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.ItemStack;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.Comparator;
+import java.util.Map;
 import java.util.UUID;
 
 @SuppressWarnings("UnstableApiUsage")
@@ -180,7 +182,9 @@ public enum HotbarItem {
             int bow = inv.first(HotbarItem.Bow.material);
             int apples = inv.first(HotbarItem.Apples.material);
             int pickaxe = inv.first(HotbarItem.Pickaxe.material);
-            return new Hotbar(sword, blocks, bow, apples, pickaxe);
+            @SuppressWarnings("OptionalGetWithoutIsPresent")
+            int blocks2 = inv.all(HotbarItem.Blocks.material).entrySet().stream().max(Comparator.comparingInt(Map.Entry::getKey)).get().getKey();
+            return new Hotbar(sword, blocks, bow, apples, pickaxe, blocks2);
         }
 
         @Override
@@ -189,9 +193,9 @@ public enum HotbarItem {
         }
     }
 
-    public record Hotbar(int sword, int blocks, int bow, int apples, int pickaxe) {
+    public record Hotbar(int sword, int blocks, int bow, int apples, int pickaxe, int blocks2) {
         public Hotbar() {
-            this(0, 1, 2, 3, 4);
+            this(0, 1, 2, 3, 6, 7);
         }
 
         public void apply(Inventory inv, boolean blue) {
@@ -200,6 +204,7 @@ public enum HotbarItem {
             inv.setItem(bow, HotbarItem.Bow.create(blue));
             inv.setItem(apples, HotbarItem.Apples.create(blue));
             inv.setItem(pickaxe, HotbarItem.Pickaxe.create(blue));
+            inv.setItem(blocks2, HotbarItem.Blocks.create(blue));
         }
 
         void applyEditor(Inventory inv) {
@@ -208,6 +213,7 @@ public enum HotbarItem {
             inv.setItem(bow, HotbarItem.Bow.createEditor());
             inv.setItem(apples, HotbarItem.Apples.createEditor());
             inv.setItem(pickaxe, HotbarItem.Pickaxe.createEditor());
+            inv.setItem(blocks2, HotbarItem.Blocks.createEditor());
         }
     }
 }

@@ -7,10 +7,10 @@ import bnjmn21.minigames.framework.Countdown;
 import bnjmn21.minigames.framework.DeathSystem;
 import bnjmn21.minigames.framework.GameInstance;
 import bnjmn21.minigames.framework.Settings;
-import bnjmn21.minigames.maps.BlockSnapshot;
 import bnjmn21.minigames.maps.GameMap;
 import bnjmn21.minigames.util.LeaveWorldListener;
 import bnjmn21.minigames.util.Scoreboards;
+import bnjmn21.minigames.util.WorldTools;
 import com.destroystokyo.paper.event.player.PlayerPostRespawnEvent;
 import io.papermc.paper.event.player.AsyncChatEvent;
 import io.papermc.paper.registry.keys.SoundEventKeys;
@@ -29,6 +29,8 @@ import org.bukkit.*;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeInstance;
 import org.bukkit.block.Block;
+import org.bukkit.block.structure.Mirror;
+import org.bukkit.block.structure.StructureRotation;
 import org.bukkit.damage.DamageSource;
 import org.bukkit.damage.DamageType;
 import org.bukkit.entity.*;
@@ -44,6 +46,7 @@ import org.bukkit.inventory.meta.LeatherArmorMeta;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scoreboard.*;
+import org.bukkit.structure.Structure;
 
 import javax.annotation.Nullable;
 import java.util.*;
@@ -59,10 +62,12 @@ public class TheBridgeGame implements GameInstance {
     private final ArrayList<Entity> visibleToRed = new ArrayList<>();
     private final ArrayList<Entity> visibleToBlue = new ArrayList<>();
     private final ArrayList<Entity> visibleToSpectators = new ArrayList<>();
-    private List<BlockSnapshot> redCage;
-    private List<BlockSnapshot> blueCage;
+    private Structure redCage;
+    private Structure blueCage;
     private Team redTeam;
     private Team blueTeam;
+    private final ArrayList<UUID> redPlayers = new ArrayList<>();
+    private final ArrayList<UUID> bluePlayers = new ArrayList<>();
     private Team spectatorTeam;
     private Sidebar sidebar;
     private ComponentSidebarLayout sidebarLayout;
@@ -94,6 +99,7 @@ public class TheBridgeGame implements GameInstance {
             }
             buildMap();
             initTeams(settings);
+            selectCages();
             currentCountdown = new Countdown(world, 5, () -> {
                 currentCountdown = null;
                 startGame();
@@ -117,8 +123,8 @@ public class TheBridgeGame implements GameInstance {
 
     private void startRound(Component subtitle) {
         map.clearTitle();
-        BlockSnapshot.restore(map, redCage);
-        BlockSnapshot.restore(map, blueCage);
+        placeCage(redCage, data.redSpawn());
+        placeCage(blueCage, data.blueSpawn());
         for (Player player : map.getPlayers()) {
             if (redTeam.hasPlayer(player)) {
                 setupPlayer(player, false);
@@ -163,8 +169,8 @@ public class TheBridgeGame implements GameInstance {
     private void buildMap() {
         buildGoal(data.redGoal(), false);
         buildGoal(data.blueGoal(), true);
-        redCage = removeCage(data.redSpawn());
-        blueCage = removeCage(data.blueSpawn());
+        removeCage(data.redSpawn());
+        removeCage(data.blueSpawn());
     }
 
     private void initTeams(Settings settings) {
@@ -189,9 +195,11 @@ public class TheBridgeGame implements GameInstance {
             }
             player.teleport(map.getSpawnLocation());
             if (playerTeam.getValue().equals(Optional.of(0))) {
+                redPlayers.add(player.getUniqueId());
                 redTeam.addPlayer(player);
                 Minigames.resetPlayer(player, GameMode.SURVIVAL);
             } else if (playerTeam.getValue().equals(Optional.of(1))) {
+                bluePlayers.add(player.getUniqueId());
                 blueTeam.addPlayer(player);
                 Minigames.resetPlayer(player, GameMode.SURVIVAL);
             } else {
@@ -223,6 +231,31 @@ public class TheBridgeGame implements GameInstance {
                 SidebarComponent.staticLine(Component.text(gameName).color(NamedTextColor.GOLD).decorate(TextDecoration.BOLD)),
                 sidebarComponent
         );
+    }
+
+    private void selectCages() {
+        ArrayList<UUID> randomRedPlayers = new ArrayList<>(redPlayers);
+        Collections.shuffle(randomRedPlayers);
+        String redCageId = "default";
+        for (UUID player : randomRedPlayers) {
+            String cage = plugin.playerData.get(player, Cages.cageField);
+            if (!Objects.equals(cage, "default")) {
+                redCageId = cage;
+            }
+        }
+
+        ArrayList<UUID> randomBluePlayers = new ArrayList<>(bluePlayers);
+        Collections.shuffle(randomRedPlayers);
+        String blueCageId = "default";
+        for (UUID player : randomBluePlayers) {
+            String cage = plugin.playerData.get(player, Cages.cageField);
+            if (!Objects.equals(cage, "default")) {
+                blueCageId = cage;
+            }
+        }
+
+        this.redCage = plugin.theBridge.cages.load(redCageId, false);
+        this.blueCage = plugin.theBridge.cages.load(blueCageId, true);
     }
 
     @Override
@@ -624,10 +657,22 @@ public class TheBridgeGame implements GameInstance {
                 && loc.getBlockZ() >= start.z && loc.getBlockZ() <= end.z;
     }
 
-    private List<BlockSnapshot> removeCage(IVec3 spawnPos) {
-        return BlockSnapshot.copyAndClear(map,
+    private void removeCage(IVec3 spawnPos) {
+        WorldTools.clear(map,
                 spawnPos.x - 4, spawnPos.y - 2, spawnPos.z - 4,
                 9, 6, 9
+        );
+    }
+
+    private void placeCage(Structure cage, IVec3 spawnPos) {
+        cage.place(
+                new Location(map, spawnPos.x - 4, spawnPos.y - 2, spawnPos.z - 4),
+                false,
+                StructureRotation.NONE,
+                Mirror.NONE,
+                0,
+                1.0f,
+                new Random()
         );
     }
 

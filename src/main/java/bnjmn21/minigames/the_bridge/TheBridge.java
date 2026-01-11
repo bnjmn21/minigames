@@ -7,9 +7,6 @@ import bnjmn21.minigames.framework.GameInstance;
 import bnjmn21.minigames.framework.GameType;
 import bnjmn21.minigames.framework.Settings;
 import bnjmn21.minigames.maps.MapManager;
-import com.mojang.brigadier.tree.LiteralCommandNode;
-import io.papermc.paper.command.brigadier.CommandSourceStack;
-import io.papermc.paper.command.brigadier.Commands;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.entity.Player;
@@ -30,6 +27,7 @@ public class TheBridge implements GameType, Listener {
             Component.text("Red").color(NamedTextColor.RED),
             Component.text("Blue").color(NamedTextColor.BLUE),
     };
+    public final Cages cages;
     private final HashMap<UUID, HotbarItem.Editor> hotbarEditors = new HashMap<>();
     private final ArrayList<UUID> hotbarEditorsToRemove = new ArrayList<>();
     private final Minigames plugin;
@@ -42,6 +40,7 @@ public class TheBridge implements GameType, Listener {
                 plugin
         );
         this.map = new TheBridgeMap(plugin);
+        this.cages = new Cages(plugin);
         this.plugin = plugin;
         plugin.getServer().getPluginManager().registerEvents(this, plugin);
     }
@@ -66,17 +65,12 @@ public class TheBridge implements GameType, Listener {
         return new TheBridgeGame(settings, plugin);
     }
 
-    public LiteralCommandNode<CommandSourceStack> hotbarEditCommand(String name) {
-        return Commands.literal(name)
-                .requires(ctx -> ctx.getSender() instanceof Player)
-                .executes(ctx -> {
-                    if (!(ctx.getSource().getSender() instanceof Player player)) {
-                        throw new RuntimeException("unreachable");
-                    }
-                    UUID uuid = player.getUniqueId();
-                    hotbarEditors.put(uuid, new HotbarItem.Editor(player, plugin, () -> hotbarEditorsToRemove.add(uuid)));
-                    return 1;
-                }).build();
+    public void openHotbarEditor(Player player, Runnable onComplete) {
+        UUID uuid = player.getUniqueId();
+        hotbarEditors.put(uuid, new HotbarItem.Editor(player, plugin, () -> {
+            hotbarEditorsToRemove.add(uuid);
+            onComplete.run();
+        }));
     }
 
     @EventHandler

@@ -2,6 +2,7 @@ package bnjmn21.minigames.framework;
 
 import bnjmn21.minigames.Game;
 import bnjmn21.minigames.Minigames;
+import bnjmn21.minigames.framework.ui.Ui;
 import bnjmn21.minigames.maps.GameMap;
 import com.mojang.brigadier.tree.LiteralCommandNode;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
@@ -9,28 +10,20 @@ import io.papermc.paper.command.brigadier.Commands;
 import io.papermc.paper.dialog.Dialog;
 import io.papermc.paper.registry.data.dialog.ActionButton;
 import io.papermc.paper.registry.data.dialog.DialogBase;
-import io.papermc.paper.registry.data.dialog.action.DialogAction;
 import io.papermc.paper.registry.data.dialog.input.DialogInput;
 import io.papermc.paper.registry.data.dialog.input.SingleOptionDialogInput;
 import io.papermc.paper.registry.data.dialog.type.DialogType;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.event.ClickCallback;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 
 import javax.annotation.Nullable;
 import java.util.*;
-import java.util.function.Consumer;
-import java.util.function.Function;
-import java.util.function.Supplier;
 import java.util.stream.Stream;
 
 @SuppressWarnings("UnstableApiUsage")
 public class Settings {
-    static final int BUTTON_WIDTH = 150;
-    static final int SMALL_BUTTON_WIDTH = 100;
-
     public Game game;
     @Nullable
     public GameMap selectedMap;
@@ -54,7 +47,7 @@ public class Settings {
     public HashMap<UUID, Optional<Integer>> getPlayerTeams() {
         // 1. first get all players that have a specified team and assign them
         // 2. then shuffle all random players
-        // 3. assign each player to whatever team has the least amount of players
+        // 3. assign each player to whatever team has the lowest number of players
 
         HashMap<Integer, Integer> playersPerTeam = new HashMap<>();
         int numTeams = plugin.getGameType(game).getTeamNames().length;
@@ -104,65 +97,44 @@ public class Settings {
     }
 
     private Dialog settingsDialog() {
-        Dropdown<Game> gameDropdown = new Dropdown<>(
-                Component.text("Game"),
-                Arrays.stream(Game.values()),
-                game -> Component.text(game.friendlyName),
-                () -> this.game,
-                res -> this.game = res,
-                this::settingsDialog
-        );
-        Dropdown<Optional<GameMap>> mapDropdown = new Dropdown<>(
-                Component.text("Map"),
-                Stream.concat(
+        var gameDropdown = Ui.<Game>dropdown("Game")
+                .values(Arrays.stream(Game.values()))
+                .makeName(game -> Component.text(game.friendlyName))
+                .getter(() -> this.game)
+                .setter(res -> this.game = res)
+                .previous(this::settingsDialog)
+                .build();
+        var mapDropdown = Ui.<Optional<GameMap>>dropdown("Map")
+                .values(Stream.concat(
                         Stream.of(Optional.empty()),
                         plugin.getGameType(game).getMapManager().maps.values().stream().map(Optional::of)
-                ),
-                map -> map.map(m -> m.displayName).orElse(Component.text("Random").color(NamedTextColor.YELLOW)),
-                () -> Optional.ofNullable(selectedMap),
-                map -> selectedMap = map.orElse(null),
-                this::settingsDialog
-        );
-        ActionButton teamsDialogButton = ActionButton.create(
-                Component.text("Teams"),
-                null,
-                BUTTON_WIDTH,
-                DialogAction.customClick(
-                        (response, audience) -> audience.showDialog(teamsDialog()),
-                        ClickCallback.Options.builder().build()
-                )
-        );
-        ActionButton autoStartButton = ActionButton.create(
+                ))
+                .makeName(map -> map.map(m -> m.displayName).orElse(Component.text("Random", NamedTextColor.YELLOW)))
+                .getter(() -> Optional.ofNullable(selectedMap))
+                .setter(map -> selectedMap = map.orElse(null))
+                .previous(this::settingsDialog)
+                .build();
+        ActionButton teamsButton = Ui.button("Teams").onClick(aud -> aud.showDialog(teamsDialog())).build();
+        ActionButton autoStartButton = Ui.button(
                 Component.text("Autostart: ", NamedTextColor.WHITE).append(autoStart ?
                         Component.text("Enabled", NamedTextColor.GREEN)
                         : Component.text("Disabled", NamedTextColor.RED)
-                        ),
-                null,
-                BUTTON_WIDTH,
-                DialogAction.customClick(
-                        (response, audience) -> {
-                            autoStart = !autoStart;
-                            audience.showDialog(this.settingsDialog());
-                        },
-                        ClickCallback.Options.builder().build()
-                )
-        );
-        ActionButton startGameButton = ActionButton.create(
-                Component.text("Start Game", NamedTextColor.GREEN),
-                null,
-                BUTTON_WIDTH,
-                DialogAction.customClick(
-                        (response, audience) -> plugin.startGame(),
-                        ClickCallback.Options.builder().build()
-                )
-        );
+                        ))
+                .onClick(aud -> {
+                    autoStart = !autoStart;
+                    aud.showDialog(settingsDialog());
+                })
+                .build();
+        ActionButton startGameButton = Ui.button(Component.text("Start Game", NamedTextColor.GREEN))
+                .onClick(plugin::startGame)
+                .build();
 
-        return defaultMultiAction(
+        return Ui.multiAction(
                 Component.text("Settings"),
                 Stream.of(
                         gameDropdown.button,
                         mapDropdown.button,
-                        teamsDialogButton,
+                        teamsButton,
                         autoStartButton,
                         startGameButton
                 ),
@@ -174,17 +146,15 @@ public class Settings {
         List<SingleOptionDialogInput> inputs = plugin.lobby.world.getPlayers().stream()
                 .map(p -> DialogInput.singleOption(
                         p.getUniqueId().toString().replace('-', '_'),
-                        BUTTON_WIDTH,
+                        Ui.BUTTON_WIDTH,
                         playerTeamOptions(p),
                         p.displayName(),
                         true
                 )).toList();
 
-        ActionButton confirm = ActionButton.create(
-                Component.text("Confirm"),
-                null,
-                SMALL_BUTTON_WIDTH,
-                DialogAction.customClick((response, audience) -> {
+        ActionButton confirm = Ui.button("Confirm")
+                .width(Ui.SMALL_BUTTON_WIDTH)
+                .onClick((response, audience) -> {
                     teams.clear();
                     for (Player p : plugin.lobby.world.getPlayers()) {
                         @Nullable String teamId = response.getText(p.getUniqueId().toString().replace('-', '_'));
@@ -193,12 +163,12 @@ public class Settings {
                         }
                     }
                     audience.showDialog(this.settingsDialog());
-                }, ClickCallback.Options.builder().build())
-        );
+                })
+                .build();
 
         return Dialog.create(builder -> builder.empty()
                 .base(DialogBase.builder(Component.text("Teams")).inputs(inputs).canCloseWithEscape(true).build())
-                .type(DialogType.confirmation(confirm, back(this::settingsDialog)))
+                .type(DialogType.confirmation(confirm, Ui.backButton(this::settingsDialog)))
         );
     }
 
@@ -210,26 +180,6 @@ public class Settings {
         return gameTeams.stream().map(team ->
                 SingleOptionDialogInput.OptionEntry.create(team.id(), team.displayName(gameTeamNames), playerTeam.equals(team))
         ).toList();
-    }
-
-    private static ActionButton back(@Nullable Supplier<Dialog> previous) {
-        return ActionButton.create(
-                Component.text("Back"),
-                null,
-                SMALL_BUTTON_WIDTH,
-                DialogAction.customClick((response, audience) -> {
-                    if (previous != null) {
-                        audience.showDialog(previous.get());
-                    }
-                }, ClickCallback.Options.builder().build())
-        );
-    }
-
-    private static Dialog defaultMultiAction(Component title, Stream<ActionButton> buttons, int columns, @Nullable Supplier<Dialog> previous) {
-        return Dialog.create(builder -> builder.empty()
-                .base(DialogBase.builder(title).canCloseWithEscape(true).build())
-                .type(DialogType.multiAction(buttons.toList()).columns(columns).exitAction(back(previous)).build())
-        );
     }
 
     public interface Team {
@@ -303,44 +253,6 @@ public class Settings {
             public boolean equals(Object obj) {
                 return obj instanceof GameTeam(int t) && team == t;
             }
-        }
-    }
-
-    private static class Dropdown<T> {
-        public final ActionButton button;
-
-        Dropdown(
-                Component title,
-                Stream<T> values,
-                Function<T, Component> name,
-                Supplier<T> getter,
-                Consumer<T> setter,
-                @Nullable Supplier<Dialog> previous) {
-            Stream<ActionButton> actions = values.map(entry -> ActionButton.create(
-                            name.apply(entry),
-                            null,
-                            BUTTON_WIDTH,
-                            DialogAction.customClick(
-                                    (response, audience) -> {
-                                        setter.accept(entry);
-                                        if (previous != null) {
-                                            audience.showDialog(previous.get());
-                                        }
-                                    },
-                                    ClickCallback.Options.builder().build()
-                            )
-                    ));
-            Dialog dialog = defaultMultiAction(title, actions, 2, previous);
-
-            button = ActionButton.create(
-                    title.append(Component.text(": "), name.apply(getter.get())),
-                    null,
-                    BUTTON_WIDTH,
-                    DialogAction.customClick(
-                            (response, audience) -> audience.showDialog(dialog),
-                            ClickCallback.Options.builder().build()
-                    )
-            );
         }
     }
 }

@@ -232,13 +232,11 @@ public class TheBridgeGame implements GameInstance {
         SidebarComponent sidebarComponent = SidebarComponent.builder()
                 .addStaticLine(Component.translatable("the_bridge.sidebar.map", NamedTextColor.GRAY, this.mapName.color(NamedTextColor.WHITE)))
                 .addBlankLine()
-                .addDynamicLine(() -> Component.translatable("the_bridge.sidebar.red", NamedTextColor.RED).append(
-                        Component.text("⬤".repeat(redPoints)),
-                        Component.text("⬤".repeat(POINTS_TO_WIN - redPoints), NamedTextColor.GRAY))
+                .addDynamicLine(() -> Component.translatable("the_bridge.sidebar.red", NamedTextColor.RED,
+                        Component.text("⬤".repeat(redPoints)).append(Component.text("⬤".repeat(POINTS_TO_WIN - redPoints), NamedTextColor.GRAY)))
                 )
-                .addDynamicLine(() -> Component.translatable("the_bridge.sidebar.blue", NamedTextColor.BLUE).append(
-                        Component.text("⬤".repeat(bluePoints)),
-                        Component.text("⬤".repeat(POINTS_TO_WIN - bluePoints), NamedTextColor.GRAY))
+                .addDynamicLine(() -> Component.translatable("the_bridge.sidebar.blue", NamedTextColor.BLUE,
+                        Component.text("⬤".repeat(bluePoints)).append(Component.text("⬤".repeat(POINTS_TO_WIN - bluePoints), NamedTextColor.GRAY)))
                 )
                 .build();
         this.sidebarLayout = new ComponentSidebarLayout(
@@ -580,9 +578,9 @@ public class TheBridgeGame implements GameInstance {
         Component killer = HumanReadableList.of(assists.stream().map(this::fmtPlayerWithStreak).toList());
 
         if (killer != Component.empty()) {
-            return Component.translatable(deathMessageId(damageType, true), player.teamDisplayName(), killer);
+            return Component.translatable(deathMessageId(damageType, true), NamedTextColor.GRAY, player.teamDisplayName(), killer);
         } else {
-            return Component.translatable(deathMessageId(damageType, false), player.teamDisplayName());
+            return Component.translatable(deathMessageId(damageType, false), NamedTextColor.GRAY, player.teamDisplayName());
         }
     }
 
@@ -611,7 +609,7 @@ public class TheBridgeGame implements GameInstance {
     private Component fmtPlayerWithStreak(Player player) {
         int streak = streaks.getOrDefault(player.getUniqueId(), 0);
         if (streak > 3) {
-            return player.teamDisplayName().append(Component.text(" (" + streak + "X STREAK)", NamedTextColor.YELLOW).decorate(TextDecoration.BOLD));
+            return player.teamDisplayName().append(Component.translatable("the_bridge.kill_streak", NamedTextColor.YELLOW, Component.text(streak)).decorate(TextDecoration.BOLD));
         } else {
             return player.teamDisplayName();
         }

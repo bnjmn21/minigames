@@ -82,6 +82,7 @@ public class TheBridgeGame implements GameInstance {
     private final Minigames plugin;
     private final Set<UUID> hasSaidGG = new HashSet<>();
     private final HashMap<UUID, Integer> streaks = new HashMap<>();
+    private final HashMap<UUID, Integer> longestStreaks = new HashMap<>();
 
     enum State {
         NotStarted,
@@ -495,6 +496,16 @@ public class TheBridgeGame implements GameInstance {
                 ));
             }
         }
+        var longestStreak = longestStreaks.entrySet().stream().max(Comparator.comparingInt(Map.Entry::getValue));
+        if (longestStreak.isPresent() && longestStreak.get().getValue() > 3) {
+            Player longestStreakPlayer = Bukkit.getPlayer(longestStreak.get().getKey());
+            if (longestStreakPlayer != null) {
+                map.sendMessage(Component.translatable("the_bridge.longest_streak", NamedTextColor.GOLD,
+                        longestStreakPlayer.teamDisplayName(),
+                        Component.text(longestStreak.get().getValue())
+                ));
+            }
+        }
         sendHr(map);
     }
 
@@ -518,7 +529,13 @@ public class TheBridgeGame implements GameInstance {
                 player.teleport(selectRespawnLocation(player));
                 for (Player assist : assists) {
                     kills.put(assist.getUniqueId(), kills.computeIfAbsent(assist.getUniqueId(), ignored -> 0) + 1);
-                    streaks.put(assist.getUniqueId(), streaks.computeIfAbsent(assist.getUniqueId(), ignored -> 0) + 1);
+                    int streak = streaks.computeIfAbsent(assist.getUniqueId(), ignored -> 0) + 1;
+                    streaks.put(assist.getUniqueId(), streak);
+                    if (longestStreaks.containsKey(assist.getUniqueId())) {
+                        longestStreaks.put(assist.getUniqueId(), Math.max(streak, longestStreaks.get(assist.getUniqueId())));
+                    } else {
+                        longestStreaks.put(assist.getUniqueId(), streak);
+                    }
                     assist.playSound(Sound.sound(SoundEventKeys.ENTITY_ARROW_HIT_PLAYER.key(), Sound.Source.MASTER, 1, 1));
                 }
                 if (redTeam.hasPlayer(player) || blueTeam.hasPlayer(player)) {
@@ -575,9 +592,9 @@ public class TheBridgeGame implements GameInstance {
     }
 
     private Component deathMessage(Player player, DamageType damageType, List<Player> assists) {
-        Component killer = HumanReadableList.of(assists.stream().map(this::fmtPlayerWithStreak).toList());
+        Component killer = HumanReadableList.of(assists.stream().map(this::fmtPlayerWithStreak).toList()).color(NamedTextColor.GRAY);
 
-        if (killer != Component.empty()) {
+        if (!assists.isEmpty()) {
             return Component.translatable(deathMessageId(damageType, true), NamedTextColor.GRAY, player.teamDisplayName(), killer);
         } else {
             return Component.translatable(deathMessageId(damageType, false), NamedTextColor.GRAY, player.teamDisplayName());

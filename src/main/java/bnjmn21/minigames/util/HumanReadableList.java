@@ -8,11 +8,11 @@ public class HumanReadableList {
     public static Component of(List<Component> items) {
         return switch (items.size()) {
             case 0 -> Component.empty();
-            case 1 -> items.getFirst();
+            case 1 -> Component.empty().append(items.getFirst());
             default -> //noinspection OptionalGetWithoutIsPresent
-                    items.subList(0, items.size() - 1).stream().reduce(
+                    Component.empty().append(items.subList(0, items.size() - 1).stream().reduce(
                         (a, b) -> Component.empty().append(a, Component.translatable("human_readable_list.comma"), b)
-                    ).get().append(Component.translatable("human_readable_list.and"), items.getLast());
+                    ).get()).append(Component.translatable("human_readable_list.and"), items.getLast());
         };
     }
 

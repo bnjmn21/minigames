@@ -102,7 +102,7 @@ public enum HotbarItem {
         public Editor(Player player, Minigames plugin, Runnable onClose) {
             this.hotbar = plugin.playerData.get(player.getUniqueId(), hotbarField);
             this.player = player.getUniqueId();
-            this.inventory = plugin.getServer().createInventory(this, 18, Component.text("Hotbar editor"));
+            this.inventory = plugin.getServer().createInventory(this, 18, Component.translatable("the_bridge.hotbar_editor.title"));
             hotbar.applyEditor(this.inventory);
             ItemStack closeButton = new ItemStack(Material.NETHER_STAR);
             closeButton.editMeta(meta -> meta.displayName(Component.text("Save layout", NamedTextColor.GREEN)));
@@ -159,7 +159,7 @@ public enum HotbarItem {
             closed = true;
             by.closeInventory();
             plugin.playerData.set(player, hotbarField, hotbar);
-            by.sendMessage(Component.text("Hotbar layout saved!", NamedTextColor.GREEN));
+            by.sendMessage(Component.translatable("the_bridge.hotbar_editor.saved", NamedTextColor.GREEN));
             onClose.run();
 
         }

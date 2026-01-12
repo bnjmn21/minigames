@@ -24,8 +24,8 @@ public class TheBridge implements GameType, Listener {
     public final MapManager mapManager;
     public final TheBridgeMap map;
     public final Component[] teamNames = new Component[] {
-            Component.text("Red").color(NamedTextColor.RED),
-            Component.text("Blue").color(NamedTextColor.BLUE),
+            Component.translatable("general.red", NamedTextColor.RED),
+            Component.translatable("general.blue", NamedTextColor.BLUE),
     };
     public final Cages cages;
     private final HashMap<UUID, HotbarItem.Editor> hotbarEditors = new HashMap<>();

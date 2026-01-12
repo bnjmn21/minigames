@@ -9,6 +9,8 @@ import io.papermc.paper.registry.data.dialog.type.DialogType;
 import net.kyori.adventure.audience.Audience;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.event.ClickCallback;
+import net.kyori.adventure.translation.GlobalTranslator;
+import org.bukkit.entity.Player;
 
 import javax.annotation.Nullable;
 import java.util.function.Consumer;
@@ -25,27 +27,19 @@ public class Ui {
         return new ButtonBuilder(text);
     }
 
-    public static ButtonBuilder button(String text) {
-        return new ButtonBuilder(Component.text(text));
-    }
-
     public static <T> DropdownBuilder<T> dropdown(Component name) {
         return new DropdownBuilder<>(name);
     }
 
-    public static <T> DropdownBuilder<T> dropdown(String name) {
-        return new DropdownBuilder<>(Component.text(name));
-    }
-
-    public static Dialog multiAction(Component title, Stream<ActionButton> buttons, int columns, @Nullable Supplier<Dialog> previous) {
+    public static Dialog multiAction(Player player, Component title, Stream<ActionButton> buttons, int columns, @Nullable Supplier<Dialog> previous) {
         return Dialog.create(builder -> builder.empty()
-                .base(DialogBase.builder(title).canCloseWithEscape(true).build())
-                .type(DialogType.multiAction(buttons.toList()).columns(columns).exitAction(backButton(previous)).build())
+                .base(DialogBase.builder(tx(player, title)).canCloseWithEscape(true).build())
+                .type(DialogType.multiAction(buttons.map(b -> tx(player, b)).toList()).columns(columns).exitAction(backButton(player, previous)).build())
         );
     }
 
-    public static ActionButton backButton(@Nullable Supplier<Dialog> previous) {
-        return Ui.button("Back")
+    public static ActionButton backButton(Player player, @Nullable Supplier<Dialog> previous) {
+        return Ui.button(tx(player, Component.translatable("ui.back")))
                 .width(SMALL_BUTTON_WIDTH)
                 .onClick(audience -> {
                     if (previous != null) {
@@ -53,6 +47,20 @@ public class Ui {
                     }
                 })
                 .build();
+    }
+
+    /**
+     * A temporary workaround for <a href="https://github.com/PaperMC/Paper/issues/12971">#12971</a>
+     */
+    public static Component tx(Player player, Component comp) {
+        return GlobalTranslator.render(comp, player.locale());
+    }
+
+    /**
+     * A temporary workaround for <a href="https://github.com/PaperMC/Paper/issues/12971">#12971</a>
+     */
+    private static ActionButton tx(Player player, ActionButton btn) {
+        return ActionButton.create(tx(player, btn.label()), btn.tooltip() != null ? tx(player, btn.tooltip()) : null, btn.width(), btn.action());
     }
 
     public static class ButtonBuilder {
@@ -68,10 +76,6 @@ public class Ui {
         public ButtonBuilder tooltip(Component tooltip) {
             this.tooltip = tooltip;
             return this;
-        }
-
-        public ButtonBuilder tooltip(String tooltip) {
-            return tooltip(Component.text(tooltip));
         }
 
         public ButtonBuilder width(int width) {
@@ -134,8 +138,8 @@ public class Ui {
             return this;
         }
 
-        public Dropdown<T> build() {
-            return new Dropdown<>(title, values, makeName, getter, setter, previous);
+        public Dropdown<T> build(Player player) {
+            return new Dropdown<>(player, title, values, makeName, getter, setter, previous);
         }
     }
 
@@ -143,6 +147,7 @@ public class Ui {
         public final ActionButton button;
 
         Dropdown(
+                Player player,
                 Component title,
                 Stream<T> values,
                 Function<T, Component> name,
@@ -163,10 +168,10 @@ public class Ui {
                             ClickCallback.Options.builder().build()
                     )
             ));
-            Dialog dialog = multiAction(title, actions, 2, previous);
+            Dialog dialog = multiAction(player, title, actions, 2, previous);
 
             button = ActionButton.create(
-                    title.append(Component.text(": "), name.apply(getter.get())),
+                    Component.translatable("ui.dropdown", title, name.apply(getter.get())),
                     null,
                     BUTTON_WIDTH,
                     DialogAction.customClick(

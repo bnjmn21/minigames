@@ -1,7 +1,7 @@
 package bnjmn21.minigames;
 
 public enum Game {
-    TheBridge("The Bridge");
+    TheBridge("the_bridge.name");
 
     public final String friendlyName;
 

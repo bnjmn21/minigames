@@ -1,5 +1,6 @@
 package bnjmn21.minigames.maps;
 
+import bnjmn21.minigames.util.HumanReadableList;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
@@ -8,14 +9,14 @@ import java.util.ArrayList;
 import java.util.HashMap;
 
 public class Issues {
-    private final ArrayList<String> warnings = new ArrayList<>();
+    private final ArrayList<Component> warnings = new ArrayList<>();
     private final HashMap<IssueCollection, ArrayList<String>> warningCollections = new HashMap<>();
-    private final ArrayList<String> errors = new ArrayList<>();
+    private final ArrayList<Component> errors = new ArrayList<>();
     private final HashMap<IssueCollection, ArrayList<String>> errorCollections = new HashMap<>();
 
     public Issues() {}
 
-    public void addWarning(String item) {
+    public void addWarning(Component item) {
         warnings.add(item);
     }
 
@@ -23,7 +24,7 @@ public class Issues {
         warningCollections.computeIfAbsent(collection, k -> new ArrayList<>()).add(item);
     }
 
-    public void addError(String item) {
+    public void addError(Component item) {
         errors.add(item);
     }
 
@@ -39,20 +40,14 @@ public class Issues {
             }
 
             if (items.size() == 1) {
-                lines.add(Component.text(collection.singular(items.getFirst())).color(NamedTextColor.RED));
-            } else if (items.size() <= 3) {
-                lines.add(Component.text(collection.plural()).color(NamedTextColor.RED));
-                lines.add(Component.text(String.join(", ", items)).color(NamedTextColor.RED));
+                lines.add(Component.translatable(collection.singular(), NamedTextColor.RED, Component.text(items.getFirst())));
             } else {
-                lines.add(Component.text(collection.plural()).color(NamedTextColor.RED));
-                lines.add(Component.text(
-                        String.join(", ", items.subList(0, 2)) + ", and " + (items.size() - 2) + " more")
-                        .color(NamedTextColor.RED)
-                );
+                lines.add(Component.translatable(collection.plural(), NamedTextColor.RED));
+                lines.add(HumanReadableList.truncated(items.stream().map(i -> (Component) Component.text(i)).toList()).color(NamedTextColor.RED));
             }
         });
-        for (String error : errors) {
-            lines.add(Component.text(error).color(NamedTextColor.RED));
+        for (Component error : errors) {
+            lines.add(error.color(NamedTextColor.RED));
         }
 
         warningCollections.forEach((collection, items) -> {
@@ -61,29 +56,23 @@ public class Issues {
             }
 
             if (items.size() == 1) {
-                lines.add(Component.text(collection.singular(items.getFirst())).color(NamedTextColor.YELLOW));
-            } else if (items.size() <= 3) {
-                lines.add(Component.text(collection.plural()).color(NamedTextColor.YELLOW));
-                lines.add(Component.text(String.join(", ", items)).color(NamedTextColor.YELLOW));
+                lines.add(Component.translatable(collection.singular(), NamedTextColor.YELLOW, Component.text(items.getFirst())));
             } else {
-                lines.add(Component.text(collection.plural()).color(NamedTextColor.YELLOW));
-                lines.add(Component.text(
-                                String.join(", ", items.subList(0, 2)) + ", and " + (items.size() - 2) + " more")
-                        .color(NamedTextColor.YELLOW)
-                );
+                lines.add(Component.translatable(collection.plural(), NamedTextColor.YELLOW));
+                lines.add(HumanReadableList.truncated(items.stream().map(i -> (Component) Component.text(i)).toList()).color(NamedTextColor.YELLOW));
             }
         });
-        for (String warning : warnings) {
-            lines.add(Component.text(warning).color(NamedTextColor.YELLOW));
+        for (Component warning : warnings) {
+            lines.add(warning.color(NamedTextColor.YELLOW));
         }
 
         if (lines.size() > 10) {
             lines.subList(10, lines.size() - 10).clear();
-            lines.add(Component.text("... and more").decorate(TextDecoration.ITALIC));
+            lines.add(Component.translatable("map_editor.issues.more").decorate(TextDecoration.ITALIC));
         }
 
         if (lines.isEmpty()) {
-            lines.add(Component.text("No issues!").color(NamedTextColor.GREEN));
+            lines.add(Component.translatable("map_editor.issues.none").color(NamedTextColor.GREEN));
         }
 
         return lines;

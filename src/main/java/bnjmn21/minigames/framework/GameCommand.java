@@ -36,11 +36,10 @@ public record GameCommand(GameType gameType) {
             getterCommand = getterCommand.then(Commands.literal(field.key.getKey()).executes(ctx -> {
                 var pdc = ctx.getSource().getLocation().getWorld().getPersistentDataContainer();
                 if (pdc.has(field.key)) {
-                    ctx.getSource().getSender().sendMessage(
-                            Component.text(field.key.getKey() + " is ").append(getAndView(pdc, field))
-                    );
+                    ctx.getSource().getSender().sendMessage(Component.translatable("map_editor.command.get",
+                            Component.text(field.key.getKey()), getAndView(pdc, field)));
                 } else {
-                    ctx.getSource().getSender().sendMessage(Component.text(field.key.getKey() + " is unset"));
+                    ctx.getSource().getSender().sendMessage(Component.translatable("map_editor.command.get_unset", Component.text(field.key.getKey())));
                 }
                 return 1;
             }));
@@ -61,7 +60,7 @@ public record GameCommand(GameType gameType) {
                     if (editor != null) {
                         editor.disableUpdates = true; // prevent update spam due to mass-setting gamerules
                         gameType.getMapData().gameRules.applyAndResetOthers(world);
-                        ctx.getSource().getSender().sendMessage(Component.text("All gamerules set."));
+                        ctx.getSource().getSender().sendMessage(Component.translatable("map_editor.command.set_default_game_rules"));
                         editor.disableUpdates = false;
                         editor.onMapChange();
                     }
@@ -88,7 +87,8 @@ public record GameCommand(GameType gameType) {
                 field,
                 (ctx, value) -> {
                     field.set(ctx, value);
-                    ctx.getSource().getSender().sendMessage(Component.text("Field '" + field.key.getKey() + "' set to ").append(field.dataType.view(value)));
+                    ctx.getSource().getSender().sendMessage(Component.translatable("map_editor.command.set",
+                            Component.text(field.key.getKey()), field.dataType.view(value)));
                     @Nullable Editor editor = gameType.getMapManager().getEditor(ctx.getSource().getLocation().getWorld());
                     if (editor != null) {
                         editor.onMapChange();

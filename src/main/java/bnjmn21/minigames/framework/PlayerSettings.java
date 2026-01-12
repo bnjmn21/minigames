@@ -22,19 +22,20 @@ public class PlayerSettings {
     }
 
     public Dialog playerSettings() {
-        var theBridgeEditHotbar = Ui.button("Edit The Bridge Hotbar")
+        var theBridgeEditHotbar = Ui.button(Component.translatable("player_settings.the_bridge.hotbar"))
                 .onClick(() -> plugin.theBridge.openHotbarEditor(player, () -> player.showDialog(playerSettings())))
                 .build();
-        var theBridgeChangeCage = Ui.<String>dropdown("The Bridge Cage")
+        var theBridgeChangeCage = Ui.<String>dropdown(Component.translatable("player_settings.the_bridge.cage"))
                 .values(plugin.theBridge.cages.cages.keySet().stream())
                 .makeName(id -> Component.text(plugin.theBridge.cages.cages.get(id)))
                 .getter(() -> plugin.playerData.get(player.getUniqueId(), Cages.cageField))
                 .setter(res -> plugin.playerData.set(player.getUniqueId(), Cages.cageField, res))
                 .previous(this::playerSettings)
-                .build();
+                .build(player);
 
         return Ui.multiAction(
-                Component.text("Player Settings"),
+                player,
+                Component.translatable("player_settings.title"),
                 Stream.of(theBridgeEditHotbar, theBridgeChangeCage.button),
                 1,
                 null

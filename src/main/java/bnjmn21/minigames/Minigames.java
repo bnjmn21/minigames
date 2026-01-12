@@ -6,8 +6,12 @@ import bnjmn21.minigames.the_bridge.TheBridge;
 import io.papermc.paper.command.brigadier.Commands;
 import io.papermc.paper.plugin.lifecycle.event.registrar.ReloadableRegistrarEvent;
 import io.papermc.paper.plugin.lifecycle.event.types.LifecycleEvents;
+import net.kyori.adventure.key.Key;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.translation.GlobalTranslator;
+import net.kyori.adventure.translation.TranslationStore;
+import net.kyori.adventure.util.UTF8ResourceBundleControl;
 import net.megavex.scoreboardlibrary.api.ScoreboardLibrary;
 import net.megavex.scoreboardlibrary.api.exception.NoPacketAdapterAvailableException;
 import net.minecraft.server.level.ServerPlayer;
@@ -26,6 +30,9 @@ import org.bukkit.scoreboard.Objective;
 import org.bukkit.scoreboard.Scoreboard;
 import org.bukkit.scoreboard.Team;
 import org.jetbrains.annotations.NotNull;
+
+import java.util.Locale;
+import java.util.ResourceBundle;
 
 public final class Minigames extends JavaPlugin implements Listener {
     public ScoreboardLibrary scoreboardLibrary;
@@ -48,6 +55,11 @@ public final class Minigames extends JavaPlugin implements Listener {
         Scoreboard board = Bukkit.getScoreboardManager().getMainScoreboard();
         board.getTeams().forEach(Team::unregister);
         board.getObjectives().forEach(Objective::unregister);
+
+        var store = TranslationStore.messageFormat(Key.key("minigames:translations"));
+        ResourceBundle bundle = ResourceBundle.getBundle("bnjmn21.minigames.Bundle", Locale.US, UTF8ResourceBundleControl.utf8ResourceBundleControl());
+        store.registerAll(Locale.US, bundle, true);
+        GlobalTranslator.translator().addSource(store);
 
         lobby = new Lobby(this);
         settings = new Settings(Game.TheBridge, this);
@@ -153,7 +165,7 @@ public final class Minigames extends JavaPlugin implements Listener {
         final int autostartDelay = 10;
         if (this.settings.autoStart) {
             if (this.currentGame.game != null) {
-                this.currentGame.game.getWorld().sendMessage(Component.text("Starting next game in " + autostartDelay + " seconds...", NamedTextColor.GREEN));
+                this.currentGame.game.getWorld().sendMessage(Component.translatable("autostart.message", NamedTextColor.GREEN, Component.text(autostartDelay)));
                 Bukkit.getScheduler().runTaskLater(this, () -> {
                     if (this.settings.autoStart) {
                         startGame();

@@ -19,7 +19,6 @@ import net.kyori.adventure.audience.Audience;
 import net.kyori.adventure.sound.Sound;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
-import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import net.kyori.adventure.title.Title;
@@ -48,6 +47,7 @@ import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scoreboard.*;
 import org.bukkit.structure.Structure;
+import org.jetbrains.annotations.NotNull;
 
 import javax.annotation.Nullable;
 import java.util.*;
@@ -57,7 +57,7 @@ public class TheBridgeGame implements GameInstance {
 
     private World map;
     private final Component mapName;
-    private String gameName;
+    private Component gameName;
     public int redPoints = 0;
     public int bluePoints = 0;
     private final ArrayList<Entity> visibleToRed = new ArrayList<>();
@@ -98,10 +98,7 @@ public class TheBridgeGame implements GameInstance {
             try {
                 this.data = new TheBridgeMap.Data(world.getPersistentDataContainer(), plugin.theBridge.map);
             } catch (NullPointerException e) {
-                Bukkit.getServer().sendMessage(Component.text("Failed to load map '", TextColor.color(NamedTextColor.RED)).append(
-                        this.mapName,
-                        Component.text("'.")
-                ));
+                Bukkit.getServer().sendMessage(Component.translatable("general.failed_to_load_map", NamedTextColor.RED, this.mapName));
                 return;
             }
             buildMap();
@@ -214,7 +211,11 @@ public class TheBridgeGame implements GameInstance {
                 Minigames.resetPlayer(player, GameMode.SPECTATOR);
             }
         }
-        gameName = "The Bridge " + redTeam.getSize() + "v" + blueTeam.getSize();
+        gameName = Component.translatable(
+                "the_bridge.name_with_players",
+                Component.text(redTeam.getSize()),
+                Component.text(blueTeam.getSize())
+        );
         initSidebars();
         for (UUID uuid : playerTeams.keySet()) {
             Player player = Bukkit.getPlayer(uuid);
@@ -229,13 +230,19 @@ public class TheBridgeGame implements GameInstance {
     private void initSidebars() {
         this.sidebar = plugin.scoreboardLibrary.createSidebar(15);
         SidebarComponent sidebarComponent = SidebarComponent.builder()
-                .addStaticLine(Component.text("Map: ", NamedTextColor.GRAY).append(this.mapName.color(NamedTextColor.WHITE)))
+                .addStaticLine(Component.translatable("the_bridge.sidebar.map", NamedTextColor.GRAY, this.mapName.color(NamedTextColor.WHITE)))
                 .addBlankLine()
-                .addDynamicLine(() -> Component.text("Red: " + "⬤".repeat(redPoints), NamedTextColor.RED).append(Component.text("⬤".repeat(POINTS_TO_WIN - redPoints), NamedTextColor.GRAY)))
-                .addDynamicLine(() -> Component.text("Blue: " + "⬤".repeat(bluePoints), NamedTextColor.BLUE).append(Component.text("⬤".repeat(POINTS_TO_WIN - bluePoints), NamedTextColor.GRAY)))
+                .addDynamicLine(() -> Component.translatable("the_bridge.sidebar.red", NamedTextColor.RED).append(
+                        Component.text("⬤".repeat(redPoints)),
+                        Component.text("⬤".repeat(POINTS_TO_WIN - redPoints), NamedTextColor.GRAY))
+                )
+                .addDynamicLine(() -> Component.translatable("the_bridge.sidebar.blue", NamedTextColor.BLUE).append(
+                        Component.text("⬤".repeat(bluePoints)),
+                        Component.text("⬤".repeat(POINTS_TO_WIN - bluePoints), NamedTextColor.GRAY))
+                )
                 .build();
         this.sidebarLayout = new ComponentSidebarLayout(
-                SidebarComponent.staticLine(Component.text(gameName).color(NamedTextColor.GOLD).decorate(TextDecoration.BOLD)),
+                SidebarComponent.staticLine(gameName.color(NamedTextColor.GOLD).decorate(TextDecoration.BOLD)),
                 sidebarComponent
         );
     }
@@ -318,7 +325,7 @@ public class TheBridgeGame implements GameInstance {
     public void onBlockPlace(BlockPlaceEvent event) {
         if (!isInBuildableRegion(event.getBlockPlaced().getLocation())) {
             event.setCancelled(true);
-            event.getPlayer().sendMessage(Component.text("You cannot place blocks here", NamedTextColor.RED));
+            event.getPlayer().sendMessage(Component.translatable("general.cant_place_blocks_here", NamedTextColor.RED));
             return;
         }
 
@@ -340,9 +347,9 @@ public class TheBridgeGame implements GameInstance {
             player.teleport(selectRespawnLocation(player));
         }
         if (blue) {
-            map.showTitle(Title.title(Component.text("Blue won the game!", NamedTextColor.BLUE), Component.empty(), 10, 100, 10));
+            map.showTitle(Title.title(Component.translatable("the_bridge.blue_won", NamedTextColor.BLUE), Component.empty(), 10, 100, 10));
         } else {
-            map.showTitle(Title.title(Component.text("Red won the game!", NamedTextColor.RED), Component.empty(), 10, 100, 10));
+            map.showTitle(Title.title(Component.translatable("the_bridge.red_won", NamedTextColor.RED), Component.empty(), 10, 100, 10));
         }
         plugin.gameFinished();
         Location red_goal = data.redGoal().center(map);
@@ -436,7 +443,7 @@ public class TheBridgeGame implements GameInstance {
                 winGame(false);
             } else {
                 goalMessage(event.getPlayer(), false);
-                startRound(event.getPlayer().teamDisplayName().color(NamedTextColor.RED).append(Component.text(" scored!")));
+                startRound(Component.translatable("the_bridge.goal_title", NamedTextColor.RED, event.getPlayer().teamDisplayName()));
             }
         } else if (blueTeam.hasPlayer(event.getPlayer()) && event.getFrom().distance(data.redGoal().center(map)) < 10) {
             bluePoints++;
@@ -446,7 +453,7 @@ public class TheBridgeGame implements GameInstance {
                 winGame(true);
             } else {
                 goalMessage(event.getPlayer(), true);
-                startRound(event.getPlayer().teamDisplayName().color(NamedTextColor.BLUE).append(Component.text(" scored!")));
+                startRound(Component.translatable("the_bridge.goal_title", NamedTextColor.BLUE, event.getPlayer().teamDisplayName()));
             }
         }
         sidebarLayout.apply(sidebar);
@@ -455,53 +462,38 @@ public class TheBridgeGame implements GameInstance {
     private void goalMessage(Player player, boolean blue) {
         NamedTextColor color = blue ? NamedTextColor.BLUE : NamedTextColor.RED;
         sendHr(map);
-        map.sendMessage(Component.text("Goal by ", color).append(
+        map.sendMessage(Component.translatable("the_bridge.goal_msg.by", color,
                 player.teamDisplayName(),
-                Component.text("! "),
-                Component.text(String.format(" (%.1f HP)", player.getHealth()), NamedTextColor.GREEN)
+                Component.translatable("general.paren_hp", NamedTextColor.GREEN, Component.text(String.format("%.1f", player.getHealth())))
         ));
         int goals = playerGoals.get(player.getUniqueId());
-        if (goals == 1) {
-            map.sendMessage(Component.text("(1st Goal)", NamedTextColor.GOLD));
-        } else if (goals == 2) {
-            map.sendMessage(Component.text("(2nd Goal)", NamedTextColor.GOLD));
-        } else if (goals == 3) {
-            map.sendMessage(Component.text("(3rd Goal)", NamedTextColor.GOLD));
-        } else {
-            map.sendMessage(Component.text("(" + goals + "th Goal)", NamedTextColor.GOLD));
-        }
+        map.sendMessage(Component.translatable("the_bridge.goal_msg.goal." + goals, NamedTextColor.GOLD));
         sendHr(map);
     }
 
     private void winMessage(Player player, boolean blue) {
         NamedTextColor color = blue ? NamedTextColor.BLUE : NamedTextColor.RED;
-        String name = blue ? "Blue" : "Red";
         map.sendMessage(Component.empty());
         sendHr(map);
-        map.sendMessage(Component.text("Goal by ", color).append(
+        map.sendMessage(Component.translatable("the_bridge.goal_msg.by", color,
                 player.teamDisplayName(),
-                Component.text("! "),
-                Component.text(String.format(" (%.1f HP)", player.getHealth()), NamedTextColor.GREEN)
+                Component.translatable("general.paren_hp", NamedTextColor.GREEN, Component.text(String.format("%.1f", player.getHealth())))
         ));
         int goals = playerGoals.get(player.getUniqueId());
-        if (goals == 1) {
-            map.sendMessage(Component.text("(1st Goal)", NamedTextColor.GOLD));
-        } else if (goals == 2) {
-            map.sendMessage(Component.text("(2nd Goal)", NamedTextColor.GOLD));
-        } else if (goals == 3) {
-            map.sendMessage(Component.text("(3rd Goal)", NamedTextColor.GOLD));
-        } else {
-            map.sendMessage(Component.text("(" + goals + "th Goal)", NamedTextColor.GOLD));
-        }
+        map.sendMessage(Component.translatable("the_bridge.goal_msg.goal." + goals, NamedTextColor.GOLD));
         map.sendMessage(Component.empty());
-        map.sendMessage(Component.text(name + " won the round!", color).decorate(TextDecoration.BOLD));
+        if (blue) {
+            map.sendMessage(Component.translatable("the_bridge.blue_won", color).decorate(TextDecoration.BOLD));
+        } else {
+            map.sendMessage(Component.translatable("the_bridge.red_won", color).decorate(TextDecoration.BOLD));
+        }
         var mostKills = kills.entrySet().stream().max(Comparator.comparingInt(Map.Entry::getValue));
         if (mostKills.isPresent()) {
             Player mostKillsPlayer = Bukkit.getPlayer(mostKills.get().getKey());
             if (mostKillsPlayer != null) {
-                map.sendMessage(Component.text("Most kills: ", NamedTextColor.GOLD).append(
+                map.sendMessage(Component.translatable("the_bridge.most_kills", NamedTextColor.GOLD,
                         mostKillsPlayer.teamDisplayName(),
-                        Component.text(" - " + mostKills.get().getValue(), NamedTextColor.GOLD)
+                        Component.text(mostKills.get().getValue())
                 ));
             }
         }
@@ -553,7 +545,8 @@ public class TheBridgeGame implements GameInstance {
         return Component.text("❤".repeat(endHearts), NamedTextColor.DARK_RED).append(
                 Component.text("❤".repeat(damageHearts), NamedTextColor.RED),
                 Component.text("❤".repeat(emptyHearts), NamedTextColor.GRAY),
-                Component.text(String.format(" (%.1f HP)", endHp), NamedTextColor.GREEN)
+                Component.text(" "),
+                Component.translatable("general.paren_hp", NamedTextColor.GREEN, Component.text(String.format("%.1f", endHp)))
         );
     }
 
@@ -584,23 +577,35 @@ public class TheBridgeGame implements GameInstance {
     }
 
     private Component deathMessage(Player player, DamageType damageType, List<Player> assists) {
-        Component killer = HumanReadableList.of(assists.stream().map(this::fmtPlayerWithStreak));
+        Component killer = HumanReadableList.of(assists.stream().map(this::fmtPlayerWithStreak).toList());
 
+        if (killer != Component.empty()) {
+            return Component.translatable(deathMessageId(damageType, true), player.teamDisplayName(), killer);
+        } else {
+            return Component.translatable(deathMessageId(damageType, false), player.teamDisplayName());
+        }
+    }
+
+    private static @NotNull String deathMessageId(DamageType damageType, boolean player) {
+        String message = "the_bridge.death.other";
         if (damageType == DamageType.OUT_OF_WORLD) {
-            if (killer != null) {
-                return player.teamDisplayName().append(gray(" was knocked into the void by "), killer, gray("."));
+            if (player) {
+                message = "the_bridge.death.out_of_world.player";
             } else {
-                return player.teamDisplayName().append(gray(" fell into the void."));
+                message = "the_bridge.death.out_of_world.self";
             }
         } else if (damageType == DamageType.PLAYER_ATTACK) {
-            return player.teamDisplayName().append(gray(" was killed by "), killer, gray("."));
+            message = "the_bridge.death.attack.player";
         } else if (damageType == DamageType.ARROW) {
-            return player.teamDisplayName().append(gray(" was shot by "), killer, gray("."));
+            if (player) {
+                message = "the_bridge.death.arrow.player";
+            } else {
+                message = "the_bridge.death.arrow.self";
+            }
         } else if (damageType == DamageType.MACE_SMASH) {
-            return player.teamDisplayName().append(gray(" got absolutely fucking obliterated by "), killer, gray("."));
-        } else {
-            return player.teamDisplayName().append(gray(" died."));
+            message = "the_bridge.death.mace_smash.player";
         }
+        return message;
     }
 
     private Component fmtPlayerWithStreak(Player player) {
@@ -610,10 +615,6 @@ public class TheBridgeGame implements GameInstance {
         } else {
             return player.teamDisplayName();
         }
-    }
-
-    private Component gray(String text) {
-        return Component.text(text, NamedTextColor.GRAY);
     }
 
     @Override
@@ -691,23 +692,29 @@ public class TheBridgeGame implements GameInstance {
         goalTextPos.add(0, 3, 0);
         NamedTextColor color = blueTeam ? NamedTextColor.BLUE : NamedTextColor.RED;
         TextDisplay ownGoalText = map.spawn(goalTextPos, TextDisplay.class, entity -> {
-            entity.text(Component.text("Your Goal\n", color).append(
-                    Component.text("Defend it!").decorate(TextDecoration.ITALIC)));
+            entity.text(Component.translatable("the_bridge.goal_display.own.1", color).append(
+                    Component.newline(),
+                    Component.translatable("the_bridge.goal_display.own.2").decorate(TextDecoration.ITALIC)));
             entity.setBillboard(Display.Billboard.CENTER);
             entity.setBrightness(new Display.Brightness(15, 15));
             entity.setVisibleByDefault(false);
         });
         (blueTeam ? visibleToBlue : visibleToRed).add(ownGoalText);
         TextDisplay oppGoalText = map.spawn(goalTextPos, TextDisplay.class, entity -> {
-            entity.text(Component.text("Opponent's Goal\n", color).append(
-                    Component.text("Jump in!").decorate(TextDecoration.ITALIC)));
+            entity.text(Component.translatable("the_bridge.goal_display.opp.1", color).append(
+                    Component.newline(),
+                    Component.translatable("the_bridge.goal_display.opp.2").decorate(TextDecoration.ITALIC)));
             entity.setBillboard(Display.Billboard.CENTER);
             entity.setBrightness(new Display.Brightness(15, 15));
             entity.setVisibleByDefault(false);
         });
         (blueTeam ? visibleToRed : visibleToBlue).add(oppGoalText);
         TextDisplay spectatorGoalText = map.spawn(goalTextPos, TextDisplay.class, entity -> {
-            entity.text(Component.text((blueTeam ? "Blue" : "Red") + " Goal", color));
+            if (blueTeam) {
+                entity.text(Component.translatable("the_bridge.goal_display.spectator.blue", color));
+            } else {
+                entity.text(Component.translatable("the_bridge.goal_display.spectator.red", color));
+            }
             entity.setBillboard(Display.Billboard.CENTER);
             entity.setBrightness(new Display.Brightness(15, 15));
             entity.setVisibleByDefault(false);

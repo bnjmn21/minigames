@@ -1,7 +1,7 @@
 package bnjmn21.minigames.maps;
 
 public interface IssueCollection {
-    String singular(String item);
+    String singular();
     String plural();
 
     class UnsetField implements IssueCollection {
@@ -10,13 +10,13 @@ public interface IssueCollection {
         private UnsetField() {}
 
         @Override
-        public String singular(String item) {
-            return item + " is unset";
+        public String singular() {
+            return "map_editor.issues.unset.singular";
         }
 
         @Override
         public String plural() {
-            return "Unset items:";
+            return "map_editor.issues.unset.plural";
         }
     }
 
@@ -26,13 +26,13 @@ public interface IssueCollection {
         private WrongGameRule() {}
 
         @Override
-        public String singular(String item) {
-            return "Gamerule " + item + " is wrong";
+        public String singular() {
+            return "map_editor.issues.wrong_game_rule.singular";
         }
 
         @Override
         public String plural() {
-            return "Multiple gamerules wrong:";
+            return "map_editor.issues.wrong_game_rule.plural";
         }
     }
 }

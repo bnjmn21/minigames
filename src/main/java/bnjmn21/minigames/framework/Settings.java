@@ -91,46 +91,49 @@ public class Settings {
 
     public LiteralCommandNode<CommandSourceStack> settingsCommand(String name) {
         return Commands.literal(name).executes(ctx -> {
-            ctx.getSource().getSender().showDialog(settingsDialog());
+            if (ctx.getSource().getSender() instanceof Player player) {
+                ctx.getSource().getSender().showDialog(settingsDialog(player));
+            }
             return 1;
         }).build();
     }
 
-    private Dialog settingsDialog() {
-        var gameDropdown = Ui.<Game>dropdown("Game")
+    private Dialog settingsDialog(Player player) {
+        var gameDropdown = Ui.<Game>dropdown(Component.translatable("game_settings.game"))
                 .values(Arrays.stream(Game.values()))
-                .makeName(game -> Component.text(game.friendlyName))
+                .makeName(game -> Component.translatable(game.friendlyName))
                 .getter(() -> this.game)
                 .setter(res -> this.game = res)
-                .previous(this::settingsDialog)
-                .build();
-        var mapDropdown = Ui.<Optional<GameMap>>dropdown("Map")
+                .previous(() -> this.settingsDialog(player))
+                .build(player);
+        var mapDropdown = Ui.<Optional<GameMap>>dropdown(Component.translatable("game_settings.map"))
                 .values(Stream.concat(
                         Stream.of(Optional.empty()),
                         plugin.getGameType(game).getMapManager().maps.values().stream().map(Optional::of)
                 ))
-                .makeName(map -> map.map(m -> m.displayName).orElse(Component.text("Random", NamedTextColor.YELLOW)))
+                .makeName(map -> map.map(m -> m.displayName).orElse(Component.translatable("game_settings.map.random", NamedTextColor.YELLOW)))
                 .getter(() -> Optional.ofNullable(selectedMap))
                 .setter(map -> selectedMap = map.orElse(null))
-                .previous(this::settingsDialog)
-                .build();
-        ActionButton teamsButton = Ui.button("Teams").onClick(aud -> aud.showDialog(teamsDialog())).build();
+                .previous(() -> this.settingsDialog(player))
+                .build(player);
+        ActionButton teamsButton = Ui.button(Component.translatable("game_settings.teams")).onClick(aud -> aud.showDialog(teamsDialog(player))).build();
         ActionButton autoStartButton = Ui.button(
-                Component.text("Autostart: ", NamedTextColor.WHITE).append(autoStart ?
-                        Component.text("Enabled", NamedTextColor.GREEN)
-                        : Component.text("Disabled", NamedTextColor.RED)
+                Component.translatable("game_settings.autostart", NamedTextColor.WHITE, autoStart ?
+                        Component.translatable("game_settings.autostart.on", NamedTextColor.GREEN)
+                        : Component.translatable("game_settings.autostart.off", NamedTextColor.RED)
                         ))
                 .onClick(aud -> {
                     autoStart = !autoStart;
-                    aud.showDialog(settingsDialog());
+                    aud.showDialog(settingsDialog(player));
                 })
                 .build();
-        ActionButton startGameButton = Ui.button(Component.text("Start Game", NamedTextColor.GREEN))
+        ActionButton startGameButton = Ui.button(Component.translatable("game_settings.start", NamedTextColor.GREEN))
                 .onClick(plugin::startGame)
                 .build();
 
         return Ui.multiAction(
-                Component.text("Settings"),
+                player,
+                Component.translatable("game_settings.title"),
                 Stream.of(
                         gameDropdown.button,
                         mapDropdown.button,
@@ -142,17 +145,17 @@ public class Settings {
         );
     }
 
-    private Dialog teamsDialog() {
+    private Dialog teamsDialog(Player player) {
         List<SingleOptionDialogInput> inputs = plugin.lobby.world.getPlayers().stream()
                 .map(p -> DialogInput.singleOption(
                         p.getUniqueId().toString().replace('-', '_'),
                         Ui.BUTTON_WIDTH,
-                        playerTeamOptions(p),
+                        playerTeamOptions(player),
                         p.displayName(),
                         true
                 )).toList();
 
-        ActionButton confirm = Ui.button("Confirm")
+        ActionButton confirm = Ui.button(Ui.tx(player, Component.translatable("ui.confirm")))
                 .width(Ui.SMALL_BUTTON_WIDTH)
                 .onClick((response, audience) -> {
                     teams.clear();
@@ -162,13 +165,13 @@ public class Settings {
                             teams.put(p.getUniqueId(), Team.fromId(teamId));
                         }
                     }
-                    audience.showDialog(this.settingsDialog());
+                    audience.showDialog(this.settingsDialog(player));
                 })
                 .build();
 
         return Dialog.create(builder -> builder.empty()
-                .base(DialogBase.builder(Component.text("Teams")).inputs(inputs).canCloseWithEscape(true).build())
-                .type(DialogType.confirmation(confirm, Ui.backButton(this::settingsDialog)))
+                .base(DialogBase.builder(Ui.tx(player, Component.translatable("game_settings.teams"))).inputs(inputs).canCloseWithEscape(true).build())
+                .type(DialogType.confirmation(confirm, Ui.backButton(player, () -> this.settingsDialog(player))))
         );
     }
 
@@ -178,7 +181,7 @@ public class Settings {
         Team playerTeam = Objects.requireNonNullElse(teams.get(player.getUniqueId()), new Team.Random());
 
         return gameTeams.stream().map(team ->
-                SingleOptionDialogInput.OptionEntry.create(team.id(), team.displayName(gameTeamNames), playerTeam.equals(team))
+                SingleOptionDialogInput.OptionEntry.create(team.id(), Ui.tx(player, team.displayName(gameTeamNames)), playerTeam.equals(team))
         ).toList();
     }
 
@@ -207,7 +210,7 @@ public class Settings {
         class Random implements Team {
             @Override
             public Component displayName(Component[] gameTeams) {
-                return Component.text("Random");
+                return Component.translatable("game_settings.teams.random");
             }
 
             @Override
@@ -224,7 +227,7 @@ public class Settings {
         class Spectator implements Team {
             @Override
             public Component displayName(Component[] gameTeams) {
-                return Component.text("Spectator").color(NamedTextColor.GRAY);
+                return Component.translatable("game_settings.teams.spectator").color(NamedTextColor.GRAY);
             }
 
             @Override

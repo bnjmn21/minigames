@@ -26,18 +26,16 @@ public class Editor {
         this.mapData = plugin.getGameType(map.original().game).getMapData();
         this.sidebar = plugin.scoreboardLibrary.createSidebar(15);
         SidebarComponent.Builder sidebarComponent = SidebarComponent.builder();
-        sidebarComponent = sidebarComponent.addStaticLine(
-                Component.text("Editing: ").color(NamedTextColor.GRAY)
-                        .append(this.map.original().displayName.color(NamedTextColor.WHITE))
+        sidebarComponent = sidebarComponent.addStaticLine(Component.translatable(
+                "map_editor.sidebar.editing", NamedTextColor.GRAY, this.map.original().displayName.color(NamedTextColor.WHITE))
         ).addBlankLine();
         this.sidebarComponent = sidebarComponent
                 .addComponent(new IssuesSidebarComponent(this))
                 .build();
         this.sidebarLayout = new ComponentSidebarLayout(
                 SidebarComponent.staticLine(
-                        Component.text("The Bridge").color(NamedTextColor.GOLD).decorate(TextDecoration.BOLD).append(
-                                Component.text(" (Editor)").color(NamedTextColor.GRAY)
-                        )),
+                        Component.translatable("map_editor.sidebar.title", NamedTextColor.GOLD).decorate(TextDecoration.BOLD)
+                ),
                 this.sidebarComponent
         );
         sidebarLayout.apply(sidebar);

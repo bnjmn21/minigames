@@ -4,6 +4,7 @@ import com.mojang.brigadier.Command;
 import com.mojang.brigadier.tree.LiteralCommandNode;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
 import io.papermc.paper.command.brigadier.Commands;
+import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
 import org.bukkit.World;
@@ -68,10 +69,10 @@ public class Lobby implements Listener {
         return Commands.literal(name).executes(ctx -> {
             if (ctx.getSource().getSender() instanceof Player player) {
                 teleportToLobby(player);
-                player.sendMessage("Teleported to the lobby");
+                player.sendMessage(Component.translatable("lobby.tp"));
                 return Command.SINGLE_SUCCESS;
             } else {
-                ctx.getSource().getSender().sendMessage("Only players can use this command!");
+                ctx.getSource().getSender().sendMessage(Component.translatable("commands.player_only"));
                 return 0;
             }
         }).build();

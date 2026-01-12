@@ -44,7 +44,14 @@ public class MapManager implements LeaveWorldListener {
         this.path = path(mapsPath);
         this.editorPath = path(editorPath);
 
-        for (String map : discoverMaps(path(editorPath))) {
+        Path editorPathPath = Path.of(editorPath);
+        if (!editorPathPath.toFile().mkdirs()) {
+            if (!editorPathPath.toFile().isDirectory()) {
+                throw new RuntimeException("Failed to create editor directory");
+            }
+        }
+
+        for (String map : discoverMaps(editorPathPath)) {
             plugin.getLogger().warning("The editor for `" + map + "` wasn't closed correctly. Saving...");
             String originalMap = Paths.toString(this.path.resolve(this.editorPath.relativize(path(map))));
             GameMap.Writeable.recover(map, originalMap);
@@ -103,7 +110,7 @@ public class MapManager implements LeaveWorldListener {
             return;
         }
 
-        player.sendMessage(Component.text("Loading map...").color(NamedTextColor.GRAY));
+        player.sendMessage(Component.translatable("map_editor.loading").color(NamedTextColor.GRAY));
         teleportPlayerOnceLoaded(editorMapName, player);
 
         if (!editorMaps.containsKey(editorMapName)) {
@@ -138,7 +145,7 @@ public class MapManager implements LeaveWorldListener {
         editor.onJoin(player);
         player.teleport(editor.map.world().getSpawnLocation());
         Minigames.resetPlayer(player, GameMode.CREATIVE);
-        player.sendMessage(Component.text("You are now in the map editor. Use /l to return to the lobby."));
+        player.sendMessage(Component.translatable("map_editor.info"));
     }
 
     public LiteralCommandNode<CommandSourceStack> openEditorCommand() {
@@ -151,15 +158,13 @@ public class MapManager implements LeaveWorldListener {
                 .executes(ctx -> {
                     CommandSender sender = ctx.getSource().getSender();
                     if (!(sender instanceof Player player)) {
-                        sender.sendMessage(Component.text("Only players can use this command!")
-                                .color(NamedTextColor.RED));
+                        sender.sendMessage(Component.translatable("commands.player_only", NamedTextColor.RED));
                         return 0;
                     }
 
                     String map = StringArgumentType.getString(ctx, "world");
                     if (!maps.containsKey(fullName(map))) {
-                        sender.sendMessage(Component.text("Couldn't find map " + map + "!")
-                                .color(NamedTextColor.RED));
+                        sender.sendMessage(Component.translatable("map_editor.not_found", NamedTextColor.RED, Component.text(map)));
                         return 0;
                     }
 
@@ -174,8 +179,7 @@ public class MapManager implements LeaveWorldListener {
 
                     String map = StringArgumentType.getString(ctx, "world");
                     if (!maps.containsKey(fullName(map))) {
-                        sender.sendMessage(Component.text("Couldn't find map " + map + "!")
-                                .color(NamedTextColor.RED));
+                        sender.sendMessage(Component.translatable("map_editor.not_found", NamedTextColor.RED, Component.text(map)));
                         return 0;
                     }
 
@@ -184,7 +188,7 @@ public class MapManager implements LeaveWorldListener {
                         editMap(map, target);
                     }
 
-                    sender.sendMessage(Component.text("Teleported players to " + map + "!"));
+                    sender.sendMessage(Component.translatable("map_editor.tp_success", Component.text(map)));
                     return 1;
                 })))
             .build();

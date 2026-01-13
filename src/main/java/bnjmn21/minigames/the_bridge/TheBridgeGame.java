@@ -43,7 +43,6 @@ import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.FireworkMeta;
 import org.bukkit.inventory.meta.LeatherArmorMeta;
-import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scoreboard.*;
 import org.bukkit.structure.Structure;
@@ -83,6 +82,7 @@ public class TheBridgeGame implements GameInstance {
     private final Set<UUID> hasSaidGG = new HashSet<>();
     private final HashMap<UUID, Integer> streaks = new HashMap<>();
     private final HashMap<UUID, Integer> longestStreaks = new HashMap<>();
+    private final HashSet<IVec3> placedBlocks = new HashSet<>();
 
     enum State {
         NotStarted,
@@ -304,31 +304,22 @@ public class TheBridgeGame implements GameInstance {
 
     @Override
     public void onBlockBreak(BlockBreakEvent event) {
-        Block block = event.getBlock();
-        boolean allowed = isInBuildableRegion(block.getLocation()) && (
-                block.getType() == Material.RED_TERRACOTTA
-                || block.getType() == Material.RED_CONCRETE
-                || block.getType() == Material.WHITE_TERRACOTTA
-                || block.getType() == Material.BLUE_TERRACOTTA
-                || block.getType() == Material.BLUE_CONCRETE
-        );
+        IVec3 pos = IVec3.of(event.getBlock().getLocation());
+        boolean allowed = isBridge(pos) || (isInBuildableRegion(pos) && placedBlocks.remove(pos));
         event.setCancelled(!allowed);
     }
 
     @Override
-    public World getWorld() {
-        return map;
-    }
-
-    @Override
     public void onBlockPlace(BlockPlaceEvent event) {
-        if (!isInBuildableRegion(event.getBlockPlaced().getLocation())) {
+        IVec3 pos = IVec3.of(event.getBlockPlaced().getLocation());
+
+        if (!isInBuildableRegion(pos)) {
             event.setCancelled(true);
             event.getPlayer().sendMessage(Component.translatable("general.cant_place_blocks_here", NamedTextColor.RED));
             return;
         }
 
-        if (data.center().y + 7 == event.getBlockPlaced().getLocation().getBlockY()) {
+        if (data.center().y + 7 == pos.y) {
             if (event.getBlockPlaced().getType() == Material.RED_TERRACOTTA) {
                 event.getBlockPlaced().setType(Material.RED_CONCRETE);
             } else if (event.getBlockPlaced().getType() == Material.BLUE_TERRACOTTA) {
@@ -336,7 +327,13 @@ public class TheBridgeGame implements GameInstance {
             }
         }
 
+        this.placedBlocks.add(pos);
         event.getItemInHand().setAmount(64);
+    }
+
+    @Override
+    public World getWorld() {
+        return map;
     }
 
     private void winGame(boolean blue) {
@@ -661,16 +658,18 @@ public class TheBridgeGame implements GameInstance {
         return location;
     }
 
-    private boolean isInBuildableRegion(Location loc) {
-        TheBridgeMap fields = plugin.theBridge.map;
-        PersistentDataContainer pdc = map.getPersistentDataContainer();
-        IVec3 center = fields.center.get(pdc);
-        int limit = fields.buildLimit.get(pdc);
+    private boolean isInBuildableRegion(IVec3 loc) {
+        IVec3 center = data.center();
+        int limit = data.buildLimit();
         IVec3 start = new IVec3(center.x - limit, center.y - 11, center.z - limit);
         IVec3 end = new IVec3(center.x + limit, center.y + 7, center.z + limit);
-        return loc.getBlockX() >= start.x && loc.getBlockX() <= end.x
-                && loc.getBlockY() >= start.y && loc.getBlockY() <= end.y
-                && loc.getBlockZ() >= start.z && loc.getBlockZ() <= end.z;
+        return loc.x >= start.x && loc.x <= end.x && loc.y >= start.y && loc.y <= end.y && loc.z >= start.z && loc.z <= end.z;
+    }
+
+    private boolean isBridge(IVec3 pos) {
+        IVec3 center = data.center();
+        int manhattanDist = Math.abs(pos.x - center.x) + Math.abs(pos.z - center.z);
+        return manhattanDist <= 20 && (pos.x == center.x || pos.z == center.z);
     }
 
     private void removeCage(IVec3 spawnPos) {

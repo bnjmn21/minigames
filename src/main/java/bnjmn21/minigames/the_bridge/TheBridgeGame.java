@@ -305,8 +305,15 @@ public class TheBridgeGame implements GameInstance {
     @Override
     public void onBlockBreak(BlockBreakEvent event) {
         IVec3 pos = IVec3.of(event.getBlock().getLocation());
-        boolean allowed = (isBridge(pos) || isInBuildableRegion(pos)) && placedBlocks.remove(pos);
+        boolean allowed = (isBridge(pos) && isBridgeBlock(event.getBlock().getType()))
+            || (isInBuildableRegion(pos) && placedBlocks.remove(pos));
         event.setCancelled(!allowed);
+    }
+
+    public static void isBridgeBlock(Material type) {
+        return type == Material.RED_TERRACOTTA
+            || type == Material.WHITE_TERRACOTTA
+            || type == Material.BLUE_TERRACOTTA;
     }
 
     @Override

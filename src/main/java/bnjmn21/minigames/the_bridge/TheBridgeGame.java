@@ -310,7 +310,7 @@ public class TheBridgeGame implements GameInstance {
         event.setCancelled(!allowed);
     }
 
-    public static void isBridgeBlock(Material type) {
+    public static boolean isBridgeBlock(Material type) {
         return type == Material.RED_TERRACOTTA
             || type == Material.WHITE_TERRACOTTA
             || type == Material.BLUE_TERRACOTTA;
